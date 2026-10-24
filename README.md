@@ -120,8 +120,9 @@ Engines:
   `FILLX1`/`TIEHI`/`TIELO` handled at the right stage.
 * **STA** — per-arc delay and output slew from the Liberty NLDM tables at
   (input transition, output load), worst-of-rise/fall arcs, net delay from the
-  extracted RC tree, OCV derates (separate late/early factors for cells and
-  nets), library `max_transition`/`max_capacitance` limits, setup and hold
+  extracted RC tree, OCV derates as either flat factors or AOCV-style
+  depth-based factors (separate late/early for cells and nets), library
+  `max_transition`/`max_capacitance` limits, setup and hold
   checks, clock skew from the extracted clock tree, WNS/TNS, and reportable
   worst paths with per-stage increments and the wire component of each stage.
   `set_ocv` changes the derate factors and re-times without re-synthesising.
@@ -329,6 +330,9 @@ The engines are real; the numbers and the library are not. Read
   per cell, so it is excluded from the GDS check instead of producing thousands
   of false violations.
 * No antenna, density/CMP, multi-patterning, or well/implant rules; no LVS.
+* OCV is derate-based: flat, or depth-averaged AOCV from a single slope. There
+  are no per-cell AOCV/POCV tables, no distance-based (spatial) derates, and no
+  jitter/CRPR modelling, so the numbers are a bracket, not a signoff.
 * Liberty is a subset: NLDM delay/slew, capacitance, leakage, setup/hold and
   the max-transition/max-capacitance limits. No internal power tables, no
   CCS/ECSM, no crosstalk. SDF is written for other tools; min and max are the
@@ -356,14 +360,19 @@ The working tree here is already a git repository with a real commit history on
 `main`. It was created in a sandbox with no GitHub credentials, so nothing has
 been pushed from it — pushing is the one step you have to run yourself:
 
-```bash
-# with an authenticated GitHub CLI
-scripts/publish.sh your-user/silicon            # public
-scripts/publish.sh your-user/silicon --private  # private
+The `origin` remote already points at
+<https://github.com/akifmohamed/SILICON>; the repository exists and is empty, so
+the first push publishes the whole history:
 
-# or by hand
-git remote add origin git@github.com:your-user/silicon.git
-git push -u origin main
+```bash
+git -C silicon push -u origin main
+```
+
+With an authenticated GitHub CLI, `scripts/publish.sh` does the same thing and
+refuses to push a dirty tree or a failing test suite:
+
+```bash
+scripts/publish.sh akifmohamed/SILICON
 ```
 
 `scripts/publish.sh` refuses to run on a dirty tree, runs the test suite first,

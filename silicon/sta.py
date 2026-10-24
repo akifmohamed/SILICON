@@ -45,6 +45,11 @@ class TimingConfig:
     derate_cell_early: float = 0.95
     derate_net_late: float = 1.08
     derate_net_early: float = 0.92
+    # OCV style: "flat" applies the derates above to every arc; "aocv" shrinks
+    # the pessimism with logic depth, because random variation averages out along
+    # a path. Depth 1 gets the flat number, depth d gets flat -/+ slope*(1-1/d).
+    ocv_mode: str = "flat"
+    aocv_slope: float = 0.06
     max_transition: float = 0.0          # 0 => use the library limits only
     max_capacitance: float = 0.0         # 0 => use the library limits only
 
@@ -99,6 +104,8 @@ class TimingResult:
     corner: str = ""
     corners: Dict[str, str] = field(default_factory=dict)
     derated: bool = False
+    ocv_mode: str = "flat"
+    max_depth: int = 0
 
     def summary(self) -> Dict[str, float]:
         return {
@@ -125,11 +132,32 @@ class TimingEngine:
         self.slew: Dict[str, float] = {}
         self.arrival: Dict[str, float] = {}
         self.arrival_min: Dict[str, float] = {}
+        self.depth: Dict[str, int] = {}
         self.pred: Dict[str, Tuple[str, str, str, str, float]] = {}
         self.clock_arrival: Dict[str, float] = {}
         self._is_clock_net: Dict[str, bool] = {}
 
     # -- setup -----------------------------------------------------------
+    def derate(self, kind: str, depth: int) -> float:
+        """Derate factor for ``cell_late``/``net_early``/... at a logic depth.
+
+        ``ocv_mode='flat'`` returns the configured factor unchanged. ``'aocv'``
+        removes pessimism with depth: a 12-stage path is not as exposed to random
+        variation as a single gate, so its derate sits closer to 1.0.
+        """
+        base = float(getattr(self.cfg, "derate_" + kind))
+        if getattr(self.cfg, "ocv_mode", "flat") != "aocv":
+            return base
+        span = 1.0 - 1.0 / max(int(depth), 1)
+        slack = float(getattr(self.cfg, "aocv_slope", 0.0)) * span
+        if kind.endswith("late"):
+            factor = base - slack
+            # variation averages out towards 1.0; it never crosses to the other
+            # side, which would turn a pessimism derate into optimism
+            return max(factor, 1.0) if base >= 1.0 else factor
+        factor = base + slack
+        return min(factor, 1.0) if base <= 1.0 else factor
+
     def wire_delay(self, net: str, sink: str) -> float:
         """Delay along the extracted RC tree from the driver to one sink."""
         if self.parasitics is None:
@@ -247,6 +275,7 @@ class TimingEngine:
                 if not is_clock:
                     self.arrival[net] = cfg.input_delay
                     self.arrival_min[net] = cfg.input_delay
+                self.depth[net] = 0
 
         for cell in self.nl.sequential_cells():
             q = cell.outputs.get("Q")
@@ -260,8 +289,9 @@ class TimingEngine:
             if arc is not None:
                 delay, _ = arc.rise.lookup(cfg.clock_transition, self.load.get(q, 0.0))
                 slew, _ = arc.rise.lookup(cfg.clock_transition, self.load.get(q, 0.0))
-            self.arrival[q] = clk_arrival + delay * cfg.derate_cell_late
-            self.arrival_min[q] = clk_arrival + delay * cfg.derate_cell_early
+            self.depth[q] = 1
+            self.arrival[q] = clk_arrival + delay * self.derate("cell_late", 1)
+            self.arrival_min[q] = clk_arrival + delay * self.derate("cell_early", 1)
             self.slew[q] = slew
             self.pred[q] = (cell.instance, "Q", "CK", self._clock_net(cell), delay, 0.0)
 
@@ -281,11 +311,13 @@ class TimingEngine:
                                                       self.slew.get(in_net, cfg.default_slew),
                                                       self.load.get(out_net, 0.0))
                     wire = self.wire_delay(in_net, f"{cell.instance}/{in_pin}")
-                    cand = self.arrival[in_net] + (delay * cfg.derate_cell_late
-                                                   + wire * cfg.derate_net_late)
+                    stage = self.depth.get(in_net, 0) + 1
+                    cand = self.arrival[in_net] + (
+                        delay * self.derate("cell_late", stage)
+                        + wire * self.derate("net_late", stage))
                     cand_min = (self.arrival_min.get(in_net, 0.0)
-                                + delay * cfg.derate_cell_early
-                                + wire * cfg.derate_net_early)
+                                + delay * self.derate("cell_early", stage)
+                                + wire * self.derate("net_early", stage))
                     if best is None or cand > best:
                         best = cand
                         best_slew = out_slew
@@ -293,6 +325,9 @@ class TimingEngine:
                                               in_net, delay, wire)
                     best_min = cand_min if best_min is None else min(best_min, cand_min)
                 if best is not None:
+                    self.depth[out_net] = 1 + max(
+                        (self.depth.get(in_net, 0) for in_net in cell.inputs.values()
+                         if in_net in self.depth), default=0)
                     self.arrival[out_net] = best
                     self.arrival_min[out_net] = best_min if best_min is not None else best
                     self.slew[out_net] = best_slew
@@ -389,6 +424,8 @@ class TimingEngine:
         result.cap_violations.sort(key=lambda item: (item[1] / item[2])
                                    if item[2] else 0.0, reverse=True)
         result.corner = self.lib.corner
+        result.ocv_mode = getattr(cfg, "ocv_mode", "flat")
+        result.max_depth = max(self.depth.values(), default=0)
         result.derated = any(value != 1.0 for value in
                              (cfg.derate_cell_late, cfg.derate_cell_early,
                               cfg.derate_net_late, cfg.derate_net_early))

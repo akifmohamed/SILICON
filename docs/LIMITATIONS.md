@@ -112,8 +112,13 @@ corner analysis (setup at the slow corner, hold at the fast one), library
 WNS/TNS, per-endpoint slack, worst-path reporting with per-stage increments and
 the wire component of each stage, switching plus leakage power.
 
-Not implemented: internal power tables, CCS/ECSM, AOCV/POCV (the derates are
-flat), crosstalk delay and noise, IR drop and electromigration, clock-gating
+OCV has two modes: ``flat`` (the configured late/early factors on every arc) and
+``aocv``, which removes pessimism with logic depth — depth 1 keeps the flat
+factor, depth *d* uses ``flat ∓ slope·(1 − 1/d)``, and the factor never crosses
+1.0. ``set_ocv -mode aocv`` or ``--ocv aocv`` selects it.
+
+Not implemented: internal power tables, CCS/ECSM, per-cell AOCV/POCV tables with
+distance (spatial) derating, CRPR, jitter, crosstalk delay and noise, IR drop and electromigration, clock-gating
 power, VCD-driven activity (activity is a fixed 0.10, clocks 2.0), reading
 another tool's SPEF back into the timer (the bundled reader only summarises),
 and statistical timing.

@@ -120,7 +120,10 @@ def report_qor(timing: TimingResult, power: PowerResult, design: str,
     out.append(f"{'Max transition violations:':<32}{timing.max_slew_violations:>10}")
     out.append(f"{'Max capacitance violations:':<32}{timing.max_cap_violations:>10}")
     out.append(f"{'Worst net delay (RC):':<32}{timing.wire_delay:>10.4f} ns")
-    out.append(f"{'OCV derates:':<32}{'applied' if timing.derated else 'off':>10}")
+    out.append(f"{'OCV derates:':<32}"
+               f"{timing.ocv_mode.upper() if timing.derated else 'off':>10}")
+    if timing.derated:
+        out.append(f"{'Logic depth (max):':<32}{timing.max_depth:>10}")
     if timing.corner:
         out.append(f"{'Corner:':<32}{timing.corner:>10}")
     for name, description in timing.corners.items():

@@ -134,6 +134,8 @@ def cmd_pnr(args) -> int:
             setattr(config, key, value)
     if args.period:
         config.clock_period = args.period
+    if getattr(args, "ocv", None):
+        config.ocv_mode = args.ocv
     phys = PhysicalConfig(core_utilization=args.util, aspect_ratio=args.aspect,
                           routing_timing_driven=getattr(args, "td_route", True))
     plan = build_floorplan(netlist, library, phys)
@@ -249,7 +251,7 @@ def cmd_pnr(args) -> int:
         print("[icc2] drc rules : " + ", ".join(
             f"{name}={count}" for name, count in sorted(route.drc_violations.items())))
     print(f"[icc2] timing    : WNS {timing.wns:.3f} ns, hold {timing.hold_wns:.3f} ns "
-          f"(extracted RC + OCV)")
+          f"(extracted RC + {timing.ocv_mode.upper()} OCV, depth {timing.max_depth})")
     print(f"[icc2] parasitics: {int(stats['nets'])} nets, {stats['cap']:.3f} pF, "
           f"worst net delay {stats['worst_delay'] * 1000:.1f} ps, SPEF written")
     if len(corner_results) > 1:
@@ -321,6 +323,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                            help="core utilisation target")
             p.add_argument("--aspect", type=float, default=1.0, help="core aspect ratio")
             p.add_argument("--max-drc", type=int, default=None, dest="max_drc")
+            p.add_argument("--ocv", choices=("flat", "aocv"), default=None,
+                           help="OCV style: flat derates (default) or depth-based")
             p.add_argument("--no-td-route", dest="td_route", action="store_false",
                            help="route nets in fanout order instead of by slack")
 

@@ -154,3 +154,16 @@ def test_timing_driven_routing_never_breaks_drc(alu_netlist, library):
     route = Router(netlist, library, plan, cfg, timing=timing).route()
     assert route.drc == 0
     assert not route.unrouted_nets
+
+
+def test_set_ocv_accepts_an_ocv_mode_and_rejects_nonsense(compiled_dc):
+    shell = compiled_dc
+    _run(shell, "set_ocv -mode aocv")
+    assert shell.s.config.ocv_mode == "aocv"
+    assert shell.s.timing.ocv_mode == "aocv"
+    buffer = io.StringIO()
+    shell.out = buffer
+    shell._fatal = False
+    shell.run_script("set_ocv -mode pocv")
+    assert "flat" in buffer.getvalue() and "'aocv'" in buffer.getvalue()
+    assert shell.s.config.ocv_mode == "aocv"        # unchanged after the error

@@ -195,3 +195,40 @@ def test_single_corner_analysis_still_works(routed_alu):
     assert set(per_corner) == {"max"}
     assert merged.hold_wns == per_corner["max"].hold_wns
     assert merged.corners == {"max": library.corner}
+
+
+# -- OCV styles -------------------------------------------------------------
+def test_aocv_factors_shrink_pessimism_with_depth(routed_alu):
+    netlist, library = routed_alu["netlist"], routed_alu["library"]
+    config = TimingConfig(clock_period=4.0, ocv_mode="aocv", aocv_slope=0.06)
+    engine = TimingEngine(netlist, library, config)
+
+    # depth 1 is exactly the flat derate: no averaging has happened yet
+    assert engine.derate("cell_late", 1) == pytest.approx(config.derate_cell_late)
+    assert engine.derate("cell_early", 1) == pytest.approx(config.derate_cell_early)
+    # late derates fall towards 1.0 with depth, early derates rise towards it
+    late = [engine.derate("cell_late", depth) for depth in range(1, 25)]
+    early = [engine.derate("net_early", depth) for depth in range(1, 25)]
+    assert late == sorted(late, reverse=True) and late[-1] >= 1.0
+    assert early == sorted(early) and early[-1] <= 1.0
+    # deep paths are treated as ideal for the random component, not better than it
+    assert engine.derate("cell_late", 1000) == pytest.approx(1.0)
+    assert engine.derate("cell_early", 1000) == pytest.approx(1.0)
+
+
+def test_aocv_recovers_slack_but_keeps_the_flop_derate(routed_alu):
+    netlist, library = routed_alu["netlist"], routed_alu["library"]
+    parasitics = routed_alu["parasitics"]
+
+    def run(mode):
+        engine = TimingEngine(netlist, library,
+                              TimingConfig(clock_period=4.0, ocv_mode=mode),
+                              parasitics=parasitics)
+        engine.set_clock_arrivals(routed_alu["cts"].sink_delays)
+        return engine.run(parasitics=parasitics)
+
+    flat, aocv = run("flat"), run("aocv")
+    assert aocv.ocv_mode == "aocv" and aocv.derated
+    assert aocv.max_depth > 3
+    assert aocv.wns > flat.wns                  # less pessimism on a deep path
+    assert aocv.hold_wns != flat.hold_wns

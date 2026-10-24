@@ -424,18 +424,25 @@ class Icc2Shell(Shell):
 
         @self.register("set_ocv",
                        "set_ocv [-cell_late x] [-cell_early x] [-net_late x] "
-                       "[-net_early x] [-off]",
+                       "[-net_early x] [-mode flat|aocv] [-off]",
                        "set on-chip-variation derates and re-run timing")
         def set_ocv(args):
             s.require_netlist()
             flags, opts, _pos = parse_options(
                 args, flags=("off",),
-                options=("cell_late", "cell_early", "net_late", "net_early"))
+                options=("cell_late", "cell_early", "net_late", "net_early",
+                         "mode"))
             if "off" in flags:
                 for key in ("derate_cell_late", "derate_cell_early",
                             "derate_net_late", "derate_net_early"):
                     setattr(s.config, key, 1.0)
+            if "mode" in opts:
+                if opts["mode"] not in ("flat", "aocv"):
+                    raise ShellError("mode must be 'flat' or 'aocv'")
+                s.config.ocv_mode = opts["mode"]
             for key, value in opts.items():
+                if key == "mode":
+                    continue
                 setattr(s.config, "derate_" + key, float(value))
             s.analyse()
             self.write(f"Information: OCV derates cell {s.config.derate_cell_late:.3f}"
