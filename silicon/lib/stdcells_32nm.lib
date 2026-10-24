@@ -1,0 +1,1902 @@
+/*
+ * stdcells_32nm.lib -- synthetic single-corner standard-cell library
+ * for the `silicon` open synthesis / place-and-route engines.
+ *
+ * Corner: ss 0.95 V 125 C (worst case), typical for a first timing closure.
+ * Units: time 1ns, capacitance 1pF, leakage 1nW, area 1um^2.
+ *
+ * Tables are 3x3 NLDM: index_1 = input net transition (ns),
+ *                     index_2 = output load (pF).
+ * These numbers are representative of a small 32 nm educational PDK, not a
+ * production library. Replace this file with yours; nothing else needs to
+ * change as long as the cell names referenced in synth.py exist.
+ */
+library (stdcells_32nm) {
+  delay_model : table_lookup;
+  time_unit : "1ns";
+  capacitive_load_unit (1, pF);
+  voltage_unit : "1V";
+  current_unit : "1mA";
+  pulling_resistance_unit : "1kohm";
+  leakage_power_unit : "1nW";
+  nom_process : 1.0;
+  nom_temperature : 125.0;
+  nom_voltage : 0.95;
+
+  lu_table_template (delay_template) {
+    variable_1 : input_net_transition;
+    variable_2 : total_output_net_capacitance;
+    index_1 ("0.010, 0.050, 0.100");
+    index_2 ("0.001, 0.010, 0.020");
+  }
+
+  cell (INVX1) {
+    area : 1.06;
+    cell_leakage_power : 0.520;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00120;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0120, 0.0240, 0.0410",\
+"0.0180, 0.0310, 0.0480",\
+"0.0270, 0.0400, 0.0580");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0140, 0.0270, 0.0450",\
+"0.0200, 0.0340, 0.0520",\
+"0.0300, 0.0440, 0.0630");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0120, 0.0240, 0.0410",\
+"0.0180, 0.0310, 0.0480",\
+"0.0270, 0.0400, 0.0580");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0140, 0.0270, 0.0450",\
+"0.0200, 0.0340, 0.0520",\
+"0.0300, 0.0440, 0.0630");
+        }
+      }
+    }
+  }
+
+  cell (INVX2) {
+    area : 1.61;
+    cell_leakage_power : 0.780;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00170;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0100, 0.0190, 0.0330",\
+"0.0150, 0.0250, 0.0390",\
+"0.0220, 0.0320, 0.0470");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0110, 0.0210, 0.0360",\
+"0.0160, 0.0270, 0.0420",\
+"0.0240, 0.0350, 0.0510");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0100, 0.0190, 0.0330",\
+"0.0150, 0.0250, 0.0390",\
+"0.0220, 0.0320, 0.0470");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0110, 0.0210, 0.0360",\
+"0.0160, 0.0270, 0.0420",\
+"0.0240, 0.0350, 0.0510");
+        }
+      }
+    }
+  }
+
+  cell (BUFX1) {
+    area : 1.46;
+    cell_leakage_power : 0.700;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00130;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0200, 0.0380, 0.0620",\
+"0.0270, 0.0470, 0.0720",\
+"0.0380, 0.0600, 0.0880");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0220, 0.0410, 0.0660",\
+"0.0300, 0.0510, 0.0770",\
+"0.0410, 0.0650, 0.0940");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0200, 0.0380, 0.0620",\
+"0.0270, 0.0470, 0.0720",\
+"0.0380, 0.0600, 0.0880");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0220, 0.0410, 0.0660",\
+"0.0300, 0.0510, 0.0770",\
+"0.0410, 0.0650, 0.0940");
+        }
+      }
+    }
+  }
+
+  cell (BUFX4) {
+    area : 3.10;
+    cell_leakage_power : 1.400;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00280;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0290, 0.0480",\
+"0.0220, 0.0360, 0.0560",\
+"0.0310, 0.0460, 0.0690");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0180, 0.0320, 0.0520",\
+"0.0240, 0.0400, 0.0610",\
+"0.0340, 0.0510, 0.0750");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0290, 0.0480",\
+"0.0220, 0.0360, 0.0560",\
+"0.0310, 0.0460, 0.0690");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0180, 0.0320, 0.0520",\
+"0.0240, 0.0400, 0.0610",\
+"0.0340, 0.0510, 0.0750");
+        }
+      }
+    }
+  }
+
+  cell (BUFX8) {
+    area : 5.50;
+    cell_leakage_power : 2.600;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00460;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0140, 0.0250, 0.0410",\
+"0.0190, 0.0310, 0.0480",\
+"0.0270, 0.0400, 0.0590");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0150, 0.0270, 0.0440",\
+"0.0210, 0.0340, 0.0520",\
+"0.0290, 0.0440, 0.0640");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0140, 0.0250, 0.0410",\
+"0.0190, 0.0310, 0.0480",\
+"0.0270, 0.0400, 0.0590");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0150, 0.0270, 0.0440",\
+"0.0210, 0.0340, 0.0520",\
+"0.0290, 0.0440, 0.0640");
+        }
+      }
+    }
+  }
+
+  cell (NAND2X1) {
+    area : 1.36;
+    cell_leakage_power : 0.610;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00140;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00140;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0150, 0.0300, 0.0510",\
+"0.0220, 0.0380, 0.0600",\
+"0.0320, 0.0500, 0.0720");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0130, 0.0260, 0.0440",\
+"0.0190, 0.0330, 0.0520",\
+"0.0280, 0.0430, 0.0620");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0150, 0.0300, 0.0510",\
+"0.0220, 0.0380, 0.0600",\
+"0.0320, 0.0500, 0.0720");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0130, 0.0260, 0.0440",\
+"0.0190, 0.0330, 0.0520",\
+"0.0280, 0.0430, 0.0620");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0170, 0.0330, 0.0550",\
+"0.0240, 0.0410, 0.0640",\
+"0.0340, 0.0530, 0.0760");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0120, 0.0240, 0.0410",\
+"0.0180, 0.0310, 0.0490",\
+"0.0260, 0.0400, 0.0590");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0170, 0.0330, 0.0550",\
+"0.0240, 0.0410, 0.0640",\
+"0.0340, 0.0530, 0.0760");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0120, 0.0240, 0.0410",\
+"0.0180, 0.0310, 0.0490",\
+"0.0260, 0.0400, 0.0590");
+        }
+      }
+    }
+  }
+
+  cell (NAND3X1) {
+    area : 1.90;
+    cell_leakage_power : 0.840;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (C) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0210, 0.0400, 0.0660",\
+"0.0290, 0.0500, 0.0780",\
+"0.0420, 0.0640, 0.0930");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0180, 0.0340, 0.0560",\
+"0.0250, 0.0430, 0.0660",\
+"0.0360, 0.0550, 0.0790");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0210, 0.0400, 0.0660",\
+"0.0290, 0.0500, 0.0780",\
+"0.0420, 0.0640, 0.0930");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0180, 0.0340, 0.0560",\
+"0.0250, 0.0430, 0.0660",\
+"0.0360, 0.0550, 0.0790");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0230, 0.0430, 0.0700",\
+"0.0310, 0.0530, 0.0820",\
+"0.0450, 0.0680, 0.0980");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0310, 0.0520",\
+"0.0230, 0.0400, 0.0620",\
+"0.0330, 0.0510, 0.0740");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0230, 0.0430, 0.0700",\
+"0.0310, 0.0530, 0.0820",\
+"0.0450, 0.0680, 0.0980");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0310, 0.0520",\
+"0.0230, 0.0400, 0.0620",\
+"0.0330, 0.0510, 0.0740");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "C";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0250, 0.0460, 0.0740",\
+"0.0340, 0.0570, 0.0870",\
+"0.0480, 0.0720, 0.1040");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0140, 0.0280, 0.0480",\
+"0.0210, 0.0370, 0.0580",\
+"0.0310, 0.0480, 0.0700");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0250, 0.0460, 0.0740",\
+"0.0340, 0.0570, 0.0870",\
+"0.0480, 0.0720, 0.1040");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0140, 0.0280, 0.0480",\
+"0.0210, 0.0370, 0.0580",\
+"0.0310, 0.0480, 0.0700");
+        }
+      }
+    }
+  }
+
+  cell (NOR2X1) {
+    area : 1.42;
+    cell_leakage_power : 0.660;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0190, 0.0360, 0.0600",\
+"0.0260, 0.0450, 0.0690",\
+"0.0380, 0.0580, 0.0820");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0310, 0.0520",\
+"0.0230, 0.0400, 0.0600",\
+"0.0330, 0.0500, 0.0710");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0190, 0.0360, 0.0600",\
+"0.0260, 0.0450, 0.0690",\
+"0.0380, 0.0580, 0.0820");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0310, 0.0520",\
+"0.0230, 0.0400, 0.0600",\
+"0.0330, 0.0500, 0.0710");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0210, 0.0390, 0.0640",\
+"0.0280, 0.0480, 0.0730",\
+"0.0410, 0.0620, 0.0870");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0150, 0.0290, 0.0490",\
+"0.0210, 0.0380, 0.0570",\
+"0.0310, 0.0470, 0.0680");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0210, 0.0390, 0.0640",\
+"0.0280, 0.0480, 0.0730",\
+"0.0410, 0.0620, 0.0870");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0150, 0.0290, 0.0490",\
+"0.0210, 0.0380, 0.0570",\
+"0.0310, 0.0470, 0.0680");
+        }
+      }
+    }
+  }
+
+  cell (AND2X1) {
+    area : 1.75;
+    cell_leakage_power : 0.800;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0240, 0.0450, 0.0740",\
+"0.0320, 0.0550, 0.0850",\
+"0.0460, 0.0700, 0.1000");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0260, 0.0480, 0.0780",\
+"0.0350, 0.0590, 0.0900",\
+"0.0500, 0.0750, 0.1060");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0240, 0.0450, 0.0740",\
+"0.0320, 0.0550, 0.0850",\
+"0.0460, 0.0700, 0.1000");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0260, 0.0480, 0.0780",\
+"0.0350, 0.0590, 0.0900",\
+"0.0500, 0.0750, 0.1060");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0260, 0.0480, 0.0780",\
+"0.0350, 0.0590, 0.0900",\
+"0.0500, 0.0750, 0.1060");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0270, 0.0500, 0.0810",\
+"0.0360, 0.0610, 0.0930",\
+"0.0520, 0.0780, 0.1100");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0260, 0.0480, 0.0780",\
+"0.0350, 0.0590, 0.0900",\
+"0.0500, 0.0750, 0.1060");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0270, 0.0500, 0.0810",\
+"0.0360, 0.0610, 0.0930",\
+"0.0520, 0.0780, 0.1100");
+        }
+      }
+    }
+  }
+
+  cell (OR2X1) {
+    area : 1.80;
+    cell_leakage_power : 0.820;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00160;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00160;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0280, 0.0520, 0.0840",\
+"0.0370, 0.0630, 0.0960",\
+"0.0530, 0.0800, 0.1130");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0300, 0.0550, 0.0890",\
+"0.0400, 0.0670, 0.1010",\
+"0.0560, 0.0850, 0.1190");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0280, 0.0520, 0.0840",\
+"0.0370, 0.0630, 0.0960",\
+"0.0530, 0.0800, 0.1130");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0300, 0.0550, 0.0890",\
+"0.0400, 0.0670, 0.1010",\
+"0.0560, 0.0850, 0.1190");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0300, 0.0550, 0.0890",\
+"0.0400, 0.0670, 0.1010",\
+"0.0560, 0.0850, 0.1190");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0310, 0.0570, 0.0920",\
+"0.0410, 0.0690, 0.1050",\
+"0.0580, 0.0880, 0.1230");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0300, 0.0550, 0.0890",\
+"0.0400, 0.0670, 0.1010",\
+"0.0560, 0.0850, 0.1190");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0310, 0.0570, 0.0920",\
+"0.0410, 0.0690, 0.1050",\
+"0.0580, 0.0880, 0.1230");
+        }
+      }
+    }
+  }
+
+  cell (XOR2X1) {
+    area : 2.62;
+    cell_leakage_power : 1.100;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00180;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00180;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0380, 0.0700, 0.1140",\
+"0.0500, 0.0850, 0.1300",\
+"0.0700, 0.1060, 0.1520");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0400, 0.0740, 0.1200",\
+"0.0530, 0.0890, 0.1360",\
+"0.0740, 0.1110, 0.1590");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0380, 0.0700, 0.1140",\
+"0.0500, 0.0850, 0.1300",\
+"0.0700, 0.1060, 0.1520");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0400, 0.0740, 0.1200",\
+"0.0530, 0.0890, 0.1360",\
+"0.0740, 0.1110, 0.1590");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0410, 0.0750, 0.1210",\
+"0.0540, 0.0910, 0.1380",\
+"0.0750, 0.1130, 0.1610");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0370, 0.0680, 0.1110",\
+"0.0490, 0.0820, 0.1260",\
+"0.0680, 0.1030, 0.1480");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0410, 0.0750, 0.1210",\
+"0.0540, 0.0910, 0.1380",\
+"0.0750, 0.1130, 0.1610");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0370, 0.0680, 0.1110",\
+"0.0490, 0.0820, 0.1260",\
+"0.0680, 0.1030, 0.1480");
+        }
+      }
+    }
+  }
+
+  cell (XNOR2X1) {
+    area : 2.70;
+    cell_leakage_power : 1.140;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00180;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00180;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0420, 0.0770, 0.1240",\
+"0.0550, 0.0930, 0.1410",\
+"0.0760, 0.1150, 0.1640");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0440, 0.0810, 0.1300",\
+"0.0580, 0.0970, 0.1470",\
+"0.0800, 0.1200, 0.1710");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0420, 0.0770, 0.1240",\
+"0.0550, 0.0930, 0.1410",\
+"0.0760, 0.1150, 0.1640");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0440, 0.0810, 0.1300",\
+"0.0580, 0.0970, 0.1470",\
+"0.0800, 0.1200, 0.1710");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0450, 0.0820, 0.1310",\
+"0.0590, 0.0980, 0.1490",\
+"0.0810, 0.1210, 0.1720");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0410, 0.0740, 0.1200",\
+"0.0530, 0.0890, 0.1360",\
+"0.0740, 0.1110, 0.1590");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0450, 0.0820, 0.1310",\
+"0.0590, 0.0980, 0.1490",\
+"0.0810, 0.1210, 0.1720");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0410, 0.0740, 0.1200",\
+"0.0530, 0.0890, 0.1360",\
+"0.0740, 0.1110, 0.1590");
+        }
+      }
+    }
+  }
+
+  cell (MUX2X1) {
+    area : 2.30;
+    cell_leakage_power : 1.050;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00170;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00170;
+      max_transition : 0.4000;
+    }
+    pin (S) {
+      direction : input;
+      capacitance : 0.00190;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0300, 0.0560, 0.0910",\
+"0.0400, 0.0680, 0.1040",\
+"0.0570, 0.0860, 0.1210");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0320, 0.0600, 0.0960",\
+"0.0430, 0.0720, 0.1100",\
+"0.0610, 0.0910, 0.1280");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0300, 0.0560, 0.0910",\
+"0.0400, 0.0680, 0.1040",\
+"0.0570, 0.0860, 0.1210");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0320, 0.0600, 0.0960",\
+"0.0430, 0.0720, 0.1100",\
+"0.0610, 0.0910, 0.1280");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0320, 0.0600, 0.0960",\
+"0.0430, 0.0720, 0.1100",\
+"0.0610, 0.0910, 0.1280");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0300, 0.0560, 0.0910",\
+"0.0400, 0.0680, 0.1040",\
+"0.0570, 0.0860, 0.1210");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0320, 0.0600, 0.0960",\
+"0.0430, 0.0720, 0.1100",\
+"0.0610, 0.0910, 0.1280");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0300, 0.0560, 0.0910",\
+"0.0400, 0.0680, 0.1040",\
+"0.0570, 0.0860, 0.1210");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "S";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0410, 0.0750, 0.1210",\
+"0.0540, 0.0910, 0.1380",\
+"0.0760, 0.1140, 0.1620");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0430, 0.0790, 0.1270",\
+"0.0570, 0.0950, 0.1450",\
+"0.0790, 0.1190, 0.1690");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0410, 0.0750, 0.1210",\
+"0.0540, 0.0910, 0.1380",\
+"0.0760, 0.1140, 0.1620");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0430, 0.0790, 0.1270",\
+"0.0570, 0.0950, 0.1450",\
+"0.0790, 0.1190, 0.1690");
+        }
+      }
+    }
+  }
+
+  cell (AOI21X1) {
+    area : 1.90;
+    cell_leakage_power : 0.860;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (C) {
+      direction : input;
+      capacitance : 0.00160;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0220, 0.0420, 0.0690",\
+"0.0300, 0.0510, 0.0810",\
+"0.0430, 0.0660, 0.0950");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0180, 0.0340, 0.0560",\
+"0.0250, 0.0420, 0.0660",\
+"0.0360, 0.0540, 0.0780");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0220, 0.0420, 0.0690",\
+"0.0300, 0.0510, 0.0810",\
+"0.0430, 0.0660, 0.0950");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0180, 0.0340, 0.0560",\
+"0.0250, 0.0420, 0.0660",\
+"0.0360, 0.0540, 0.0780");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0240, 0.0450, 0.0730",\
+"0.0320, 0.0550, 0.0850",\
+"0.0460, 0.0700, 0.1000");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0310, 0.0520",\
+"0.0230, 0.0400, 0.0620",\
+"0.0330, 0.0500, 0.0730");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0240, 0.0450, 0.0730",\
+"0.0320, 0.0550, 0.0850",\
+"0.0460, 0.0700, 0.1000");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0310, 0.0520",\
+"0.0230, 0.0400, 0.0620",\
+"0.0330, 0.0500, 0.0730");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "C";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0200, 0.0380, 0.0630",\
+"0.0270, 0.0470, 0.0740",\
+"0.0390, 0.0600, 0.0870");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0210, 0.0400, 0.0660",\
+"0.0290, 0.0490, 0.0770",\
+"0.0420, 0.0630, 0.0900");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0200, 0.0380, 0.0630",\
+"0.0270, 0.0470, 0.0740",\
+"0.0390, 0.0600, 0.0870");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0210, 0.0400, 0.0660",\
+"0.0290, 0.0490, 0.0770",\
+"0.0420, 0.0630, 0.0900");
+        }
+      }
+    }
+  }
+
+  cell (OAI21X1) {
+    area : 1.95;
+    cell_leakage_power : 0.880;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00160;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00160;
+      max_transition : 0.4000;
+    }
+    pin (C) {
+      direction : input;
+      capacitance : 0.00150;
+      max_transition : 0.4000;
+    }
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0260, 0.0480, 0.0780",\
+"0.0350, 0.0590, 0.0900",\
+"0.0500, 0.0750, 0.1060");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0220, 0.0410, 0.0680",\
+"0.0300, 0.0510, 0.0790",\
+"0.0430, 0.0650, 0.0940");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0260, 0.0480, 0.0780",\
+"0.0350, 0.0590, 0.0900",\
+"0.0500, 0.0750, 0.1060");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0220, 0.0410, 0.0680",\
+"0.0300, 0.0510, 0.0790",\
+"0.0430, 0.0650, 0.0940");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0280, 0.0510, 0.0820",\
+"0.0370, 0.0630, 0.0950",\
+"0.0530, 0.0790, 0.1120");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0200, 0.0380, 0.0630",\
+"0.0280, 0.0470, 0.0740",\
+"0.0400, 0.0610, 0.0890");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0280, 0.0510, 0.0820",\
+"0.0370, 0.0630, 0.0950",\
+"0.0530, 0.0790, 0.1120");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0200, 0.0380, 0.0630",\
+"0.0280, 0.0470, 0.0740",\
+"0.0400, 0.0610, 0.0890");
+        }
+      }
+    }
+    pin (Y) {
+      direction : output;
+      timing () {
+        related_pin : "C";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0240, 0.0440, 0.0720",\
+"0.0320, 0.0550, 0.0840",\
+"0.0460, 0.0700, 0.1000");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0250, 0.0460, 0.0750",\
+"0.0340, 0.0570, 0.0870",\
+"0.0480, 0.0720, 0.1020");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0240, 0.0440, 0.0720",\
+"0.0320, 0.0550, 0.0840",\
+"0.0460, 0.0700, 0.1000");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0250, 0.0460, 0.0750",\
+"0.0340, 0.0570, 0.0870",\
+"0.0480, 0.0720, 0.1020");
+        }
+      }
+    }
+  }
+
+  cell (FAX1) {
+    area : 5.20;
+    cell_leakage_power : 2.100;
+    dont_touch : false ;
+    pin (A) {
+      direction : input;
+      capacitance : 0.00200;
+      max_transition : 0.4000;
+    }
+    pin (B) {
+      direction : input;
+      capacitance : 0.00200;
+      max_transition : 0.4000;
+    }
+    pin (CI) {
+      direction : input;
+      capacitance : 0.00180;
+      max_transition : 0.4000;
+    }
+    pin (S) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (CO) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (S) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0620, 0.1080, 0.1720",\
+"0.0780, 0.1280, 0.1960",\
+"0.1040, 0.1580, 0.2280");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0640, 0.1120, 0.1780",\
+"0.0810, 0.1320, 0.2020",\
+"0.1080, 0.1630, 0.2350");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0620, 0.1080, 0.1720",\
+"0.0780, 0.1280, 0.1960",\
+"0.1040, 0.1580, 0.2280");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0640, 0.1120, 0.1780",\
+"0.0810, 0.1320, 0.2020",\
+"0.1080, 0.1630, 0.2350");
+        }
+      }
+    }
+    pin (S) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0650, 0.1120, 0.1780",\
+"0.0810, 0.1320, 0.2020",\
+"0.1080, 0.1630, 0.2350");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0600, 0.1040, 0.1660",\
+"0.0750, 0.1240, 0.1900",\
+"0.1000, 0.1530, 0.2210");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0650, 0.1120, 0.1780",\
+"0.0810, 0.1320, 0.2020",\
+"0.1080, 0.1630, 0.2350");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0600, 0.1040, 0.1660",\
+"0.0750, 0.1240, 0.1900",\
+"0.1000, 0.1530, 0.2210");
+        }
+      }
+    }
+    pin (S) {
+      direction : output;
+      timing () {
+        related_pin : "CI";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0480, 0.0850, 0.1370",\
+"0.0620, 0.1010, 0.1560",\
+"0.0840, 0.1280, 0.1860");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0500, 0.0880, 0.1420",\
+"0.0640, 0.1050, 0.1610",\
+"0.0860, 0.1320, 0.1920");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0480, 0.0850, 0.1370",\
+"0.0620, 0.1010, 0.1560",\
+"0.0840, 0.1280, 0.1860");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0500, 0.0880, 0.1420",\
+"0.0640, 0.1050, 0.1610",\
+"0.0860, 0.1320, 0.1920");
+        }
+      }
+    }
+    pin (CO) {
+      direction : output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0380, 0.0680, 0.1110",\
+"0.0490, 0.0820, 0.1270",\
+"0.0680, 0.1030, 0.1480");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0350, 0.0630, 0.1030",\
+"0.0460, 0.0770, 0.1190",\
+"0.0640, 0.0970, 0.1390");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0380, 0.0680, 0.1110",\
+"0.0490, 0.0820, 0.1270",\
+"0.0680, 0.1030, 0.1480");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0350, 0.0630, 0.1030",\
+"0.0460, 0.0770, 0.1190",\
+"0.0640, 0.0970, 0.1390");
+        }
+      }
+    }
+    pin (CO) {
+      direction : output;
+      timing () {
+        related_pin : "B";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0400, 0.0710, 0.1150",\
+"0.0510, 0.0860, 0.1320",\
+"0.0710, 0.1070, 0.1540");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0330, 0.0600, 0.0980",\
+"0.0430, 0.0730, 0.1130",\
+"0.0610, 0.0920, 0.1320");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0400, 0.0710, 0.1150",\
+"0.0510, 0.0860, 0.1320",\
+"0.0710, 0.1070, 0.1540");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0330, 0.0600, 0.0980",\
+"0.0430, 0.0730, 0.1130",\
+"0.0610, 0.0920, 0.1320");
+        }
+      }
+    }
+    pin (CO) {
+      direction : output;
+      timing () {
+        related_pin : "CI";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0290, 0.0520, 0.0860",\
+"0.0380, 0.0640, 0.0990",\
+"0.0530, 0.0810, 0.1180");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0270, 0.0490, 0.0810",\
+"0.0360, 0.0600, 0.0940",\
+"0.0500, 0.0770, 0.1120");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0290, 0.0520, 0.0860",\
+"0.0380, 0.0640, 0.0990",\
+"0.0530, 0.0810, 0.1180");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0270, 0.0490, 0.0810",\
+"0.0360, 0.0600, 0.0940",\
+"0.0500, 0.0770, 0.1120");
+        }
+      }
+    }
+  }
+
+  cell (DFFX1) {
+    area : 5.40;
+    cell_leakage_power : 2.050;
+    dont_touch : false ;
+    pin (D) {
+      direction : input;
+      capacitance : 0.00190;
+      max_transition : 0.4000;
+    }
+    pin (CK) {
+      direction : input;
+      capacitance : 0.00220;
+      max_transition : 0.4000;
+      clock : true;
+    }
+    pin (Q) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Q) {
+      direction : output;
+      timing () {
+        related_pin : "CK";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0860, 0.1320, 0.1960",\
+"0.0940, 0.1440, 0.2120",\
+"0.1080, 0.1630, 0.2360");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0920, 0.1400, 0.2070",\
+"0.1000, 0.1520, 0.2230",\
+"0.1150, 0.1720, 0.2480");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0860, 0.1320, 0.1960",\
+"0.0940, 0.1440, 0.2120",\
+"0.1080, 0.1630, 0.2360");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0920, 0.1400, 0.2070",\
+"0.1000, 0.1520, 0.2230",\
+"0.1150, 0.1720, 0.2480");
+        }
+      }
+    }
+    pin (D) {
+      direction : input;
+      timing () {
+        related_pin : "CK";
+        timing_type : setup_rising ;
+        rise_constraint () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0520, 0.0760, 0.1060",\
+"0.0560, 0.0810, 0.1120",\
+"0.0620, 0.0890, 0.1220");
+        }
+        fall_constraint () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0520, 0.0760, 0.1060",\
+"0.0560, 0.0810, 0.1120",\
+"0.0620, 0.0890, 0.1220");
+        }
+      }
+    }
+    pin (D) {
+      direction : input;
+      timing () {
+        related_pin : "CK";
+        timing_type : hold_rising ;
+        rise_constraint () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0140, 0.0060, 0.0020",\
+"0.0160, 0.0080, 0.0030",\
+"0.0200, 0.0110, 0.0050");
+        }
+        fall_constraint () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0140, 0.0060, 0.0020",\
+"0.0160, 0.0080, 0.0030",\
+"0.0200, 0.0110, 0.0050");
+        }
+      }
+    }
+  }
+
+  cell (DFFRX1) {
+    area : 6.30;
+    cell_leakage_power : 2.550;
+    dont_touch : false ;
+    pin (D) {
+      direction : input;
+      capacitance : 0.00190;
+      max_transition : 0.4000;
+    }
+    pin (CK) {
+      direction : input;
+      capacitance : 0.00220;
+      max_transition : 0.4000;
+      clock : true;
+    }
+    pin (RN) {
+      direction : input;
+      capacitance : 0.00180;
+      max_transition : 0.4000;
+    }
+    pin (Q) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+    pin (Q) {
+      direction : output;
+      timing () {
+        related_pin : "CK";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0940, 0.1430, 0.2120",\
+"0.1030, 0.1560, 0.2290",\
+"0.1180, 0.1760, 0.2550");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.1000, 0.1510, 0.2230",\
+"0.1090, 0.1640, 0.2410",\
+"0.1250, 0.1850, 0.2680");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0940, 0.1430, 0.2120",\
+"0.1030, 0.1560, 0.2290",\
+"0.1180, 0.1760, 0.2550");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.1000, 0.1510, 0.2230",\
+"0.1090, 0.1640, 0.2410",\
+"0.1250, 0.1850, 0.2680");
+        }
+      }
+    }
+    pin (Q) {
+      direction : output;
+      timing () {
+        related_pin : "RN";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0700, 0.1120, 0.1700",\
+"0.0800, 0.1270, 0.1900",\
+"0.1000, 0.1550, 0.2260");
+        }
+        cell_fall () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0740, 0.1180, 0.1780",\
+"0.0840, 0.1340, 0.1990",\
+"0.1050, 0.1620, 0.2360");
+        }
+        rise_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0700, 0.1120, 0.1700",\
+"0.0800, 0.1270, 0.1900",\
+"0.1000, 0.1550, 0.2260");
+        }
+        fall_transition () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0740, 0.1180, 0.1780",\
+"0.0840, 0.1340, 0.1990",\
+"0.1050, 0.1620, 0.2360");
+        }
+      }
+    }
+    pin (D) {
+      direction : input;
+      timing () {
+        related_pin : "CK";
+        timing_type : setup_rising ;
+        rise_constraint () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0580, 0.0840, 0.1170",\
+"0.0620, 0.0900, 0.1240",\
+"0.0690, 0.0980, 0.1340");
+        }
+        fall_constraint () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0580, 0.0840, 0.1170",\
+"0.0620, 0.0900, 0.1240",\
+"0.0690, 0.0980, 0.1340");
+        }
+      }
+    }
+    pin (D) {
+      direction : input;
+      timing () {
+        related_pin : "CK";
+        timing_type : hold_rising ;
+        rise_constraint () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0080, 0.0030",\
+"0.0180, 0.0100, 0.0040",\
+"0.0220, 0.0130, 0.0060");
+        }
+        fall_constraint () {
+          index_1 ("0.010, 0.050, 0.100");
+          index_2 ("0.001, 0.010, 0.020");
+          values ("0.0160, 0.0080, 0.0030",\
+"0.0180, 0.0100, 0.0040",\
+"0.0220, 0.0130, 0.0060");
+        }
+      }
+    }
+  }
+
+  cell (TIELO) {
+    area : 0.80;
+    cell_leakage_power : 0.100;
+    dont_touch : false ;
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+  }
+
+  cell (TIEHI) {
+    area : 0.82;
+    cell_leakage_power : 0.110;
+    dont_touch : false ;
+    pin (Y) {
+      direction : output;
+      max_capacitance : 0.0800;
+      function : "out";
+    }
+  }
+
+  cell (FILLX1) {
+    area : 1.10;
+    cell_leakage_power : 0.020;
+  }
+
+}
