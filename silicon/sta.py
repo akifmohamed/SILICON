@@ -17,6 +17,7 @@ and the report says so.
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -38,6 +39,14 @@ class TimingConfig:
     clock_activity: float = 2.0
     max_paths: int = 10
     clock_name: str = "clk"
+    # On-chip variation: late derates stretch the setup path, early derates
+    # shrink the hold path. 1.0 disables OCV.
+    derate_cell_late: float = 1.05
+    derate_cell_early: float = 0.95
+    derate_net_late: float = 1.08
+    derate_net_early: float = 0.92
+    max_transition: float = 0.0          # 0 => use the library limits only
+    max_capacitance: float = 0.0         # 0 => use the library limits only
 
 
 @dataclass
@@ -49,6 +58,7 @@ class Hop:
     delay: float
     arrival: float
     slew: float
+    wire: float = 0.0
 
 
 @dataclass
@@ -82,6 +92,10 @@ class TimingResult:
     hold_paths: List[TimingPath] = field(default_factory=list)
     unclocked_endpoints: int = 0
     clock_skew: float = 0.0
+    wire_delay: float = 0.0             # worst net delay on the critical path
+    corner: str = ""
+    corners: Dict[str, str] = field(default_factory=dict)
+    derated: bool = False
 
     def summary(self) -> Dict[str, float]:
         return {
@@ -97,10 +111,12 @@ class TimingResult:
 
 class TimingEngine:
     def __init__(self, netlist: GateNetlist, library: Library,
-                 config: Optional[TimingConfig] = None) -> None:
+                 config: Optional[TimingConfig] = None,
+                 parasitics=None) -> None:
         self.nl = netlist
         self.lib = library
         self.cfg = config or TimingConfig()
+        self.parasitics = parasitics
         self.driver = netlist.driver_map()
         self.load: Dict[str, float] = {}
         self.slew: Dict[str, float] = {}
@@ -111,6 +127,19 @@ class TimingEngine:
         self._is_clock_net: Dict[str, bool] = {}
 
     # -- setup -----------------------------------------------------------
+    def wire_delay(self, net: str, sink: str) -> float:
+        """Delay along the extracted RC tree from the driver to one sink."""
+        if self.parasitics is None:
+            return 0.0
+        return self.parasitics.delay(net, sink)
+
+    def _slew_limit(self, model) -> float:
+        limits = [pin.max_transition for pin in model.pins.values()
+                  if pin.max_transition > 0]
+        if limits:
+            return max(limits)
+        return self.cfg.max_transition
+
     def _compute_loads(self, wire_cap: Optional[float] = None,
                        net_caps: Optional[Dict[str, float]] = None) -> None:
         per_sink = self.cfg.wire_cap if wire_cap is None else wire_cap
@@ -129,8 +158,13 @@ class TimingEngine:
                 if pin in cell.inputs:
                     total += self.lib.cell(cell.cell).pins[pin].capacitance
                     sinks += 1
-            extra = (net_caps or {}).get(net, 0.0)
-            self.load[net] = total + sinks * per_sink + extra
+            if self.parasitics is not None:
+                # extracted wire capacitance replaces the per-fanout estimate
+                extra = self.parasitics.cap(net)
+                self.load[net] = total + extra
+            else:
+                extra = (net_caps or {}).get(net, 0.0)
+                self.load[net] = total + sinks * per_sink + extra
 
     def set_clock_arrivals(self, arrivals: Dict[str, float]) -> None:
         """``instance -> insertion delay at its clock pin`` (post-CTS propagation)."""
@@ -185,11 +219,18 @@ class TimingEngine:
         arc = model.arc(in_pin, out_pin)
         if arc is None:
             return 0.0, in_slew
-        delay, _clamped = arc.rise.lookup(in_slew, out_load)
-        slew, _ = arc.rise.lookup(in_slew, out_load)
-        return delay, slew
+        # worst of the rise and fall arcs: a single-corner analysis that does not
+        # split polarity has to take the slower of the two transitions
+        rise_delay, _ = arc.rise.lookup(in_slew, out_load)
+        fall_delay, _ = arc.fall.lookup(in_slew, out_load)
+        rise_slew, _ = arc.rise.lookup(in_slew, out_load)
+        fall_slew, _ = arc.fall.lookup(in_slew, out_load)
+        return max(rise_delay, fall_delay), max(rise_slew, fall_slew)
 
-    def run(self, net_caps: Optional[Dict[str, float]] = None) -> TimingResult:
+    def run(self, net_caps: Optional[Dict[str, float]] = None,
+            parasitics=None) -> TimingResult:
+        if parasitics is not None:
+            self.parasitics = parasitics
         self._compute_loads(net_caps=net_caps)
         result = TimingResult()
         order = self._combinational_order()
@@ -216,10 +257,10 @@ class TimingEngine:
             if arc is not None:
                 delay, _ = arc.rise.lookup(cfg.clock_transition, self.load.get(q, 0.0))
                 slew, _ = arc.rise.lookup(cfg.clock_transition, self.load.get(q, 0.0))
-            self.arrival[q] = clk_arrival + delay
-            self.arrival_min[q] = clk_arrival + delay
+            self.arrival[q] = clk_arrival + delay * cfg.derate_cell_late
+            self.arrival_min[q] = clk_arrival + delay * cfg.derate_cell_early
             self.slew[q] = slew
-            self.pred[q] = (cell.instance, "Q", "CK", self._clock_net(cell), delay)
+            self.pred[q] = (cell.instance, "Q", "CK", self._clock_net(cell), delay, 0.0)
 
         # --- forward propagation ----------------------------------------
         for cell in order:
@@ -236,12 +277,17 @@ class TimingEngine:
                     delay, out_slew = self._arc_delay(cell, in_pin, out_pin,
                                                       self.slew.get(in_net, cfg.default_slew),
                                                       self.load.get(out_net, 0.0))
-                    cand = self.arrival[in_net] + delay
-                    cand_min = self.arrival_min.get(in_net, 0.0) + delay
+                    wire = self.wire_delay(in_net, f"{cell.instance}/{in_pin}")
+                    cand = self.arrival[in_net] + (delay * cfg.derate_cell_late
+                                                   + wire * cfg.derate_net_late)
+                    cand_min = (self.arrival_min.get(in_net, 0.0)
+                                + delay * cfg.derate_cell_early
+                                + wire * cfg.derate_net_early)
                     if best is None or cand > best:
                         best = cand
                         best_slew = out_slew
-                        self.pred[out_net] = (cell.instance, out_pin, in_pin, in_net, delay)
+                        self.pred[out_net] = (cell.instance, out_pin, in_pin,
+                                              in_net, delay, wire)
                     best_min = cand_min if best_min is None else min(best_min, cand_min)
                 if best is not None:
                     self.arrival[out_net] = best
@@ -319,17 +365,26 @@ class TimingEngine:
             driver = self.driver.get(net)
             if driver is None:
                 continue
-            limit = 0.4
-            if slew > limit:
+            limit = self._slew_limit(self.lib.cell(driver.cell)) or cfg.max_transition
+            if limit and slew > limit:
                 result.max_slew_violations += 1
         for net, load in self.load.items():
             driver = self.driver.get(net)
             if driver is None:
                 continue
             model = self.lib.cell(driver.cell)
-            cap = max((model.pins[p].max_capacitance for p in driver.outputs), default=0.0)
+            limits = [pin.max_capacitance for pin in model.pins.values()
+                      if pin.max_capacitance > 0]
+            cap = max(limits, default=0.0) or cfg.max_capacitance
             if cap and load > cap:
                 result.max_cap_violations += 1
+        result.corner = self.lib.corner
+        result.derated = any(value != 1.0 for value in
+                             (cfg.derate_cell_late, cfg.derate_cell_early,
+                              cfg.derate_net_late, cfg.derate_net_early))
+        if result.paths:
+            result.wire_delay = max((sum(hop.wire for hop in path.hops)
+                                     for path in result.paths), default=0.0)
         return result
 
     # -- path reconstruction ---------------------------------------------
@@ -338,7 +393,7 @@ class TimingEngine:
         cur = net
         while cur in self.pred and cur not in seen:
             seen.add(cur)
-            inst, out_pin, in_pin, in_net, _delay = self.pred[cur]
+            inst, out_pin, in_pin, in_net, _delay = self.pred[cur][:5]
             cell = self.nl.by_instance(inst)
             if cell.is_sequential:
                 return f"{cell.instance}/Q"
@@ -359,10 +414,12 @@ class TimingEngine:
         cur = net
         while cur in self.pred and cur not in seen:
             seen.add(cur)
-            inst, out_pin, in_pin, in_net, delay = self.pred[cur]
+            entry = self.pred[cur]
+            inst, out_pin, in_pin, in_net, delay = entry[:5]
+            wire = entry[5] if len(entry) > 5 else 0.0
             cell = self.nl.by_instance(inst)
             hops.append(Hop(point=f"{inst}/{out_pin}", cell=cell.cell, pin=out_pin,
-                            net=cur, delay=delay,
+                            net=cur, delay=delay, wire=wire,
                             arrival=self.arrival.get(cur, 0.0),
                             slew=self.slew.get(cur, 0.0)))
             cur = in_net
@@ -427,6 +484,46 @@ def estimate_power(netlist: GateNetlist, library: Library,
     return PowerResult(dynamic_mw=dynamic, leakage_mw=leakage,
                        clock_mw=clock_power,
                        cell_area=sum(library.cell(c.cell).area for c in netlist.cells))
+
+
+def analyse_corners(netlist: GateNetlist,
+                    libraries: Dict[str, Library],
+                    config: Optional[TimingConfig] = None,
+                    parasitics=None) -> Tuple[TimingResult, PowerResult, Dict[str, TimingResult]]:
+    """Min/max corner analysis: setup at the slow corner, hold at the fast one.
+
+    ``libraries`` maps a corner role (``"max"``/``"min"``) to a library. Each
+    corner is timed with the same netlist and the same extracted parasitics, and
+    the reported result takes setup data from the max corner and hold data from
+    the min corner -- which is the point of a min/max analysis: setup is worst
+    when cells are slow, hold is worst when cells are fast.
+
+    Returns ``(merged, power, per_corner)``.
+    """
+    cfg = config or TimingConfig()
+    per_corner: Dict[str, TimingResult] = {}
+    powers: Dict[str, PowerResult] = {}
+    for role in ("max", "min"):
+        lib = libraries.get(role)
+        if lib is None:
+            continue
+        engine = TimingEngine(netlist, lib, cfg, parasitics=parasitics)
+        per_corner[role] = engine.run(parasitics=parasitics)
+        powers[role] = estimate_power(netlist, lib, cfg, engine.load)
+    if not per_corner:
+        raise ValueError("no libraries given for corner analysis")
+
+    setup_role = "max" if "max" in per_corner else next(iter(per_corner))
+    hold_role = "min" if "min" in per_corner else setup_role
+    merged = copy.copy(per_corner[setup_role])
+    merged.corners = {role: result.corner for role, result in per_corner.items()}
+    if hold_role != setup_role:
+        fast = per_corner[hold_role]
+        merged.hold_wns = fast.hold_wns
+        merged.hold_violations = fast.hold_violations
+        merged.hold_paths = fast.hold_paths
+    power = powers[setup_role]
+    return merged, power, per_corner
 
 
 def analyse(netlist: GateNetlist, library: Library,

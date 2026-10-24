@@ -22,7 +22,8 @@ from .netlist import GateNetlist, WordDesign
 from .serialize import dump as dump_netlist
 from .shell import Shell, ShellError, parse_options
 from .sim import equivalence_check
-from .sta import PowerResult, TimingConfig, TimingResult, analyse
+from .sta import (PowerResult, TimingConfig, TimingResult, analyse,
+                  analyse_corners)
 from .synth import OptStats, TechmapOptions, synthesize
 from .verilog import VerilogError, parse_modules
 
@@ -34,6 +35,8 @@ class DcSession:
 
     def __init__(self, library: Optional[Library] = None) -> None:
         self.library = library or default_library()
+        self.library_min = None            # fast corner for hold, when loaded
+        self.corner_results = {}
         self.sources: Dict[str, object] = {}
         self.modules: List = []
         self.design: Optional[WordDesign] = None
@@ -157,12 +160,21 @@ class DcShell(Shell):
                             f"{len(module.params):>12}{source:>28}")
             return "\n".join(rows)
 
-        @self.register("set_library", "set_library <file.lib>",
-                       "load a Liberty library instead of the built-in one")
+        @self.register("set_library", "set_library [-min] <file.lib>",
+                       "load a Liberty library; -min loads the fast corner used "
+                       "for hold analysis")
         def set_library(args):
-            if not args:
+            flags, opts, positional = parse_options(args, options=("min",),
+                                                    flags=("min",))
+            if not positional:
                 raise ShellError("set_library needs a .lib path")
-            path = args[0].strip("{}")
+            path = positional[-1].strip("{}")
+            if "min" in opts or flags:
+                s.library_min = read_library(path)
+                self.write(f"Information: Loaded fast corner '{s.library_min.name}' "
+                           f"({s.library_min.corner}, "
+                           f"{len(s.library_min.cells)} cells) from {path}")
+                return ""
             s.library = read_library(path)
             s.library_path = path
             self.write(f"Information: Loaded library '{s.library.name}' "
@@ -264,7 +276,11 @@ class DcShell(Shell):
             self.write(f"Information: Optimisation removed {stats.dead_removed} "
                        f"unconnected cell(s), folded {stats.folded} constant network(s), "
                        f"collapsed {stats.mux_collapsed} multiplexer(s).")
-            timing, power = analyse(netlist, s.library, s.config)
+            libraries = {"max": s.library}
+            if s.library_min is not None:
+                libraries["min"] = s.library_min
+            timing, power, s.corner_results = analyse_corners(
+                netlist, libraries, s.config)
             s.timing, s.power = timing, power
             s.compiled = True
             area = power.cell_area

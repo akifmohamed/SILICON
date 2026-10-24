@@ -65,6 +65,7 @@ def routed_alu(alu_netlist, library):
     """Floorplan -> place -> CTS -> route on a copy of the ALU netlist."""
     import copy
 
+    from silicon.parasitics import extract
     from silicon.pnr import (ClockTree, PhysicalConfig, Placer, Router,
                              build_floorplan, insert_fillers, route_capacitance)
     netlist = copy.deepcopy(alu_netlist)
@@ -76,7 +77,8 @@ def routed_alu(alu_netlist, library):
         netlist.add_cell(buffer_cell)
     route = Router(netlist, library, plan, cfg).route()
     fillers = insert_fillers(netlist, library, plan)
+    parasitics = extract(netlist, library, plan, route, cfg.rules)
     return {"netlist": netlist, "library": library, "plan": plan,
             "placement": placement, "cts": cts, "route": route,
-            "fillers": fillers, "cfg": cfg,
+            "fillers": fillers, "cfg": cfg, "parasitics": parasitics,
             "caps": route_capacitance(route, cfg)}

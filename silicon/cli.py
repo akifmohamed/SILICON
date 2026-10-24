@@ -17,7 +17,7 @@ from typing import List, Optional
 
 from . import reports
 from .elaborate import elaborate
-from .library import Library, default_library, read_library
+from .library import Library, bundled_corners, default_library, fast_library, read_library
 from .netlist import GateNetlist
 from .pnr import (
     ClockTree, PhysicalConfig, Placer, Router, build_floorplan, insert_fillers,
@@ -26,10 +26,11 @@ from .pnr import (
 from .serialize import dump as dump_netlist
 from .serialize import load as load_netlist
 from .sim import equivalence_check
-from .sta import TimingConfig, TimingEngine, analyse, estimate_power
+from .sta import TimingConfig, TimingEngine, analyse, analyse_corners, estimate_power
 from .synth import TechmapOptions, synthesize
 from .verilog import parse_modules
 from .lef import write_block_lef, write_cell_lef, write_tech_lef
+from .parasitics import extract, read_spef_summary, write_spef
 from .writers import (ascii_layout, check_gds, read_gds_summary, write_def,
                       write_gds, write_svg)
 
@@ -144,10 +145,14 @@ def cmd_pnr(args) -> int:
     route = Router(netlist, library, plan, phys).route()
     fillers = insert_fillers(netlist, library, plan)
     net_caps = route_capacitance(route, phys)
-    engine = TimingEngine(netlist, library, config)
-    engine.set_clock_arrivals(cts.sink_delays)
-    timing = engine.run(net_caps=net_caps)
-    power = estimate_power(netlist, library, config, engine.load)
+    parasitics = extract(netlist, library, plan, route, phys.rules)
+    # min/max analysis by default: setup at the slow corner, hold at the fast one
+    libraries = {"max": library}
+    if args.min_lib != "":                       # "" means --no-mcmm
+        libraries["min"] = (read_library(args.min_lib) if args.min_lib
+                            else fast_library())
+    timing, power, corner_results = analyse_corners(netlist, libraries, config,
+                                                    parasitics=parasitics)
 
     out = args.output
     _mkdir(out)
@@ -165,6 +170,7 @@ def cmd_pnr(args) -> int:
               title=netlist.top, fillers=fillers,
               stats={"WNS": f"{timing.wns:.3f} ns", "DRC": str(route.drc),
                      "wirelength": f"{route.wirelength:.0f} um"})
+    write_spef(f"{base}.spef", parasitics, netlist.top)
     write_tech_lef(os.path.join(out, "tech.lef"), library)
     write_cell_lef(os.path.join(out, "cells.lef"), library)
     write_block_lef(f"{base}.lef", netlist, library, plan, netlist.top)
@@ -191,6 +197,21 @@ def cmd_pnr(args) -> int:
     qor_lines.append(f"{'Timing-weighted nets:':<32}"
                      f"{placement.timing_weighted_nets:>20}")
     qor_lines.append(f"{'GDS stream DRC:':<32}{stream_total:>20}")
+    stats = parasitics.summary()
+    qor_lines.append(f"{'Extracted cap (pF):':<32}{stats['cap']:>20.4f}")
+    qor_lines.append(f"{'Extracted res (ohm):':<32}{stats['res']:>20.1f}")
+    qor_lines.append(f"{'Worst net delay (ps):':<32}"
+                     f"{stats['worst_delay'] * 1000:>20.2f}")
+    qor_lines.append(f"{'Worst path wire (ps):':<32}{timing.wire_delay * 1000:>20.2f}")
+    qor_lines.append(f"{'OCV derates:':<32}"
+                     f"{'applied' if timing.derated else 'off':>20}")
+    for role in ("max", "min"):
+        result = corner_results.get(role)
+        if result is None:
+            continue
+        qor_lines.append(f"{'Corner ' + role + ' setup WNS:':<32}{result.wns:>20.3f}")
+        qor_lines.append(f"{'Corner ' + role + ' hold WNS:':<32}"
+                         f"{result.hold_wns:>20.3f}")
     with open(f"{base}.qor.rpt", "w", encoding="utf-8") as handle:
         handle.write("\n".join(qor_lines) + "\n")
     with open(f"{base}.timing.rpt", "w", encoding="utf-8") as handle:
@@ -211,14 +232,22 @@ def cmd_pnr(args) -> int:
     if route.drc_violations:
         print("[icc2] drc rules : " + ", ".join(
             f"{name}={count}" for name, count in sorted(route.drc_violations.items())))
-    print(f"[icc2] timing    : WNS {timing.wns:.3f} ns, hold {timing.hold_wns:.3f} ns")
+    print(f"[icc2] timing    : WNS {timing.wns:.3f} ns, hold {timing.hold_wns:.3f} ns "
+          f"(extracted RC + OCV)")
+    print(f"[icc2] parasitics: {int(stats['nets'])} nets, {stats['cap']:.3f} pF, "
+          f"worst net delay {stats['worst_delay'] * 1000:.1f} ps, SPEF written")
+    if len(corner_results) > 1:
+        print(f"[icc2] corners   : max {corner_results['max'].corner} setup "
+              f"{corner_results['max'].wns:.3f} ns; min "
+              f"{corner_results['min'].corner} hold "
+              f"{corner_results['min'].hold_wns:.3f} ns")
     print(f"[icc2] gdsii     : {summary['structures']} structures, "
           f"{summary['srefs']} placements, {summary['paths']} paths, "
           f"{stream_total} stream DRC")
     if stream_total:
         print("[icc2] gds rules : " + ", ".join(
             f"{name}={len(items)}" for name, items in sorted(stream_drc.items())))
-    print(f"[icc2] outputs   : {base}.{{def,lef,gds,svg,qor.rpt,timing.rpt}}")
+    print(f"[icc2] outputs   : {base}.{{def,lef,gds,svg,spef,qor.rpt,timing.rpt}}")
     min_wns = getattr(args, "min_wns", None)
     if min_wns is not None and timing.wns < min_wns:
         return 3
@@ -267,6 +296,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             p.add_argument("--max-fanout", type=int, default=8, dest="max_fanout")
             p.add_argument("--min-wns", type=float, default=None, dest="min_wns")
         if pnr:
+            p.add_argument("--min-lib", dest="min_lib",
+                           help="fast-corner Liberty for hold analysis "
+                                "(default: bundled fast corner)")
+            p.add_argument("--no-mcmm", dest="min_lib", action="store_const",
+                           const="", help="single-corner analysis (max corner only)")
             p.add_argument("--util", type=float, default=0.65,
                            help="core utilisation target")
             p.add_argument("--aspect", type=float, default=1.0, help="core aspect ratio")

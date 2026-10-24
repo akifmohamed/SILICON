@@ -81,14 +81,15 @@ def report_timing(timing: TimingResult, design: str, max_paths: int = 3,
         out.append(f"Path Group: {path.group}")
         out.append(f"Path Type : {path.path_type}")
         out.append("-" * 62)
-        out.append(f"{'Point':<34}{'Incr':>8}{'Path':>10}")
+        out.append(f"{'Point':<30}{'Incr':>8}{'Path':>9}{'Wire':>8}")
         out.append("-" * 62)
         prev = 0.0
         for hop in path.hops:
             incr = hop.arrival - prev
             prev = hop.arrival
-            label = hop.point if len(hop.point) <= 33 else hop.point[:30] + "..."
-            out.append(f"{label:<34}{incr:>8.4f}{hop.arrival:>10.4f}   ({hop.cell})")
+            label = hop.point if len(hop.point) <= 29 else hop.point[:26] + "..."
+            out.append(f"{label:<30}{incr:>8.4f}{hop.arrival:>9.4f}"
+                       f"{hop.wire:>8.4f}   ({hop.cell})")
         if path.hops:
             out.append(f"{'data arrival time':<34}{'':>8}{path.arrival:>10.4f}")
         out.append("")
@@ -118,6 +119,12 @@ def report_qor(timing: TimingResult, power: PowerResult, design: str,
     out.append(f"{'Hold violations:':<32}{timing.hold_violations:>10}")
     out.append(f"{'Max transition violations:':<32}{timing.max_slew_violations:>10}")
     out.append(f"{'Max capacitance violations:':<32}{timing.max_cap_violations:>10}")
+    out.append(f"{'Worst net delay (RC):':<32}{timing.wire_delay:>10.4f} ns")
+    out.append(f"{'OCV derates:':<32}{'applied' if timing.derated else 'off':>10}")
+    if timing.corner:
+        out.append(f"{'Corner:':<32}{timing.corner:>10}")
+    for name, description in timing.corners.items():
+        out.append(f"{'  ' + name + ':':<32}{description:>10}")
     out.append(f"{'Unclocked endpoints:':<32}{timing.unclocked_endpoints:>10}")
     out.append("")
     out.append(f"{'Cell area:':<32}{power.cell_area:>10.2f} um^2")

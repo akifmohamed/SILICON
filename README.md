@@ -40,7 +40,7 @@ Word-level design (signals, macro cells)
   │  synth.py       constant folding, DCE, width reduction, carry-chain mapping
   ▼
 Gate netlist (AND2/NAND2/NOR2/AOI21/OAI21/MUX2/XOR/FA/DFF/DFFR…)
-  │  sta.py         NLDM delay/slew propagation, setup + hold, power
+  │  sta.py         NLDM delay/slew, OCV derates, min/max corners, power
   │  serialize.py   JSON netlist database  ──────────────┐   ← the handoff
   ▼                                                      │
 Reports (.rpt), Verilog out, SDC                          │
@@ -118,9 +118,15 @@ Engines:
   AOI21/OAI21 chains, muxes to MUX2X1, with the standard cells of the library;
   `FILLX1`/`TIEHI`/`TIELO` handled at the right stage.
 * **STA** — per-arc delay and output slew from the Liberty NLDM tables at
-  (input transition, output load), RC-derived net delay, setup and hold checks,
-  clock skew from the extracted clock tree, WNS/TNS, and reportable worst paths
-  with per-stage increments.
+  (input transition, output load), worst-of-rise/fall arcs, net delay from the
+  extracted RC tree, OCV derates (separate late/early factors for cells and
+  nets), library `max_transition`/`max_capacitance` limits, setup and hold
+  checks, clock skew from the extracted clock tree, WNS/TNS, and reportable
+  worst paths with per-stage increments and the wire component of each stage.
+* **Min/max corners** — `set_library -min fast.lib` switches the hold analysis
+  to the fast corner; `report_corners` shows setup at the slow corner and hold
+  at the fast one. Both bundled corners are synthetic and the fast one is
+  generated from the slow one by `tools/make_corner.py`.
 * **Power** — switching (`0.5·C·V²·f·α`) per net plus Liberty leakage, clock
   nets at twice the clock frequency.
 * **Equivalence gate** — `verify` (also run by the CLI) simulates the mapped
@@ -133,9 +139,10 @@ Engines:
 `icc2_shell` command set: `read_netlist`, `set_library`, `create_clock`,
 `initialize_floorplan`, `place_opt`, `clock_opt`, `route_auto`, `report_drc`,
 `check_gds`, `report_congestion`, `report_placement`, `report_clock_tree`,
-`report_timing`, `report_area`, `report_power`, `report_qor`, `report_layout`,
-`write_def`, `write_gds`, `write_lef`, `write_library_lef`, `write_tech_lef`,
-`write_svg`, `write_netlist`, `help`, `history`, `version`.
+`report_parasitics`, `report_corners`, `report_timing`, `report_area`,
+`report_power`, `report_qor`, `report_layout`, `write_def`, `write_gds`,
+`write_spef`, `write_lef`, `write_library_lef`, `write_tech_lef`, `write_svg`,
+`write_netlist`, `help`, `history`, `version`.
 
 Engines:
 
@@ -159,6 +166,11 @@ Engines:
   second cut everywhere it can. Used for nets the track allocator cannot place:
   a net is never shared onto an occupied track to hide congestion — it is failed,
   handed to the maze, and reported as unrouted if the maze cannot help.
+* **Parasitic extraction** — `parasitics.py` splits the routed geometry at
+  junctions and pin positions, assigns R and C per layer from the rule deck,
+  computes the Elmore delay to every sink and the total load, and writes
+  SPEF 1.0 (`write_spef`, plus `report_parasitics` for the worst nets). Post-route
+  timing then uses the wires that were actually drawn.
 * **DRC** — `DrcChecker` re-derives every violation from the geometry
   (SHORT, SPACING, WIDTH, MIN_AREA, VIA_ENCLOSURE, VIA_SIZE, VIA_SPACING)
   independently of the allocator's bookkeeping.
@@ -184,18 +196,25 @@ rather than producing illegal geometry.
 
 `./bin/silicon flow -r examples/rtl/<top>.v -t <top> --period 4`
 
-| design | cells | area (µm²) | WNS pre-route (ns) | routed wire (µm) | vias | DRC | stream DRC | core (µm) × rows |
-|---|---|---|---|---|---|---|---|---|
-| `alu` (8-bit, 5 ops + MAC) | 218 | 545.24 | +1.868 | 4222.4 | 215 | 0 | 0 | 29.07 × 30.00, 15 |
-| `counter` (8-bit, enable/load) | 42 | 151.25 | +2.310 | 584.4 | 41 | 0 | 0 | 15.39 × 16.00, 8 |
-| `mac` (8×8 accumulate) | 163 | 660.80 | +1.084 | 4406.0 | 198 | 0 | 0 | 31.92 × 32.00, 16 |
+Timing is reported the way a signoff flow reports it: setup at the slow corner
+with extracted RC and OCV derates, hold at the fast corner.
 
-Post-route worst setup slack (with the extracted RC): **+1.617 / +2.294 /
-+0.733 ns**; worst hold slack +1.106 / +0.254 / +0.332 ns. Peak placement
-congestion: 0.57 / 0.29 / 0.46 (mean 0.23 / 0.11 / 0.21). Zero DRC violations both in the router's model
-and in the GDSII stream.
+| design | cells | area (µm²) | WNS pre-route (ns) | routed wire (µm) | vias | DRC | stream DRC | setup WNS (ns) | hold WNS (ns) | core (µm) × rows |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `alu` (8-bit, 5 ops + MAC) | 218 | 545.24 | +1.743 | 4101.7 | 208 | 0 | 0 | +1.148 | +1.095 | 29.07 × 30.00, 15 |
+| `counter` (8-bit, enable/load) | 42 | 151.25 | +2.275 | 584.4 | 41 | 0 | 0 | +2.131 | +0.168 | 15.39 × 16.00, 8 |
+| `mac` (8×8 accumulate) | 163 | 660.80 | +0.959 | 4385.2 | 199 | 0 | 0 | −0.001 | +0.211 | 31.92 × 32.00, 16 |
 
-Timing-driven placement is measurable rather than decorative. On the same ALU:
+The `mac` result is the honest one to look at: with a per-fanout wire estimate it
+looked comfortable, and once the extracted RC of the real wires and the OCV
+derates go in it lands 1 ps short of 4 ns. The tool reports that instead of
+softening the model, and `--min-wns 0` exits non-zero.
+
+Extraction gives 250 nets / 2.32 pF / 350 Ω on the ALU with a 5.9 ps worst net
+delay; the SPEF is written next to the layout.
+
+Timing-driven placement is measurable rather than decorative. On the ALU, with
+the old per-fanout wire model so the comparison is not mixing effects:
 
 | | HPWL (µm) | weighted HPWL (µm) | routed wire (µm) | post-route WNS (ns) |
 |---|---|---|---|---|
@@ -205,11 +224,11 @@ Timing-driven placement is measurable rather than decorative. On the same ALU:
 At a 2 ns period, where the design genuinely misses timing, the same comparison is
 WNS −0.404 → −0.384 ns and TNS −0.625 → −0.594 ns. The gain is small because the
 weight is the only lever placement has here — and the tool still reports the
-negative slack instead of hiding it (`--min-wns 0` exits non-zero).
+negative slack instead of hiding it.
 
 Determinism: the same inputs produce byte-identical outputs across processes and
-hash seeds. `md5sum` of all ten artefacts is stable under
-`PYTHONHASHSEED=1` and `PYTHONHASHSEED=7`.
+hash seeds. `md5sum` of every artefact is stable under `PYTHONHASHSEED=1` and
+`PYTHONHASHSEED=7`.
 
 ```
 $ PYTHONHASHSEED=1 ./bin/silicon flow -r examples/rtl/alu.v -t alu -o /tmp/a
@@ -221,8 +240,6 @@ identical
 Equivalence (`verify`, part of every `flow` run): alu 2304 output bits over 256
 vectors, counter and mac likewise — **0 mismatches**.
 
----
-
 ## Repository layout
 
 ```
@@ -232,10 +249,12 @@ silicon/
   elaborate.py          widths, parameters, flattening, reset handling
   netlist.py            WordDesign / GateNetlist models
   library.py            Liberty parser + NLDM lookup
-  lib/stdcells_32nm.lib the synthetic library (21 cells)
+  lib/stdcells_32nm.lib    synthetic library, slow corner (21 cells)
+  lib/stdcells_32nm_ff.lib synthetic fast corner, generated (21 cells)
   synth.py              optimisation + technology mapping
   sta.py                static timing + power
   rules.py              metal rule deck + GDSII layer map
+  parasitics.py         RC extraction (Elmore), SPEF writer and reader
   pnr.py                floorplan, placement, congestion, CTS, router, maze, DRC
   writers.py            DEF, GDSII, SVG, ASCII, GDS read-back + stream DRC
   lef.py                LEF writer + reader
@@ -250,11 +269,13 @@ docs/
   DESIGN_RULES.md       the rule deck, what is checked where, how to change it
   DATABASE.md           the JSON handoff format
   LIMITATIONS.md        what is deliberately not implemented, and why
+tools/
+  make_corner.py        regenerates the fast corner from the slow one
 examples/
   rtl/{alu,counter,mac}.v
   dc_alu.tcl, icc2_alu.tcl    scripted tool runs
   alu_layout_preview.svg      rendered ALU layout
-tests/                  84 tests
+tests/                  96 tests
 ```
 
 ---
@@ -262,15 +283,17 @@ tests/                  84 tests
 ## Tests
 
 ```bash
-python3 -m pytest tests/ -q     # 84 passed
+python3 -m pytest tests/ -q     # 96 passed
 ```
 
 The suite covers the parser, elaboration, the Liberty parser, synthesis and its
 equivalence gate, STA, floorplan/place/CTS/route invariants, the rule deck and
 the DRC checker (each rule has a test that makes it fire), the maze router,
-timing-driven and congestion-aware placement, all four writers, the GDS read-back
-and stream DRC, and both shells end-to-end — including that `icc2` runs from the
-JSON file alone with `dc` nowhere in the picture.
+timing-driven and congestion-aware placement, parasitic extraction and the SPEF
+round trip, OCV derates, library limits, min/max corner analysis, regeneration of
+the fast corner from the slow one, all four writers, the GDS read-back and stream
+DRC, and both shells end-to-end — including that `icc2` runs from the JSON file
+alone with `dc` nowhere in the picture.
 
 ---
 
@@ -285,9 +308,9 @@ The engines are real; the numbers and the library are not. Read
   per cell, so it is excluded from the GDS check instead of producing thousands
   of false violations.
 * No antenna, density/CMP, multi-patterning, or well/implant rules; no LVS.
-* Liberty is a subset: NLDM delay/slew, capacitance, leakage, setup/hold. No
-  internal power tables, no CCS/ECSM, no multi-corner, no OCV derates, no
-  crosstalk, no SDF.
+* Liberty is a subset: NLDM delay/slew, capacitance, leakage, setup/hold and
+  the max-transition/max-capacitance limits. No internal power tables, no
+  CCS/ECSM, no crosstalk, no SDF output.
 * Placement is quadratic + legalisation + swaps. No wirelength-driven detailed
   placement, no region/boundary constraints, no multi-row cells, no pin
   assignment optimisation.

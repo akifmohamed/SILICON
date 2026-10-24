@@ -14,15 +14,16 @@ from typing import Dict, List, Optional
 
 from . import reports
 from .lef import read_lef, write_block_lef, write_cell_lef, write_tech_lef
-from .library import Library, default_library, read_library
+from .library import Library, default_library, fast_library, read_library
 from .netlist import GateCell, GateNetlist
+from .parasitics import Parasitics, extract, read_spef_summary, write_spef
 from .pnr import (CTSResult, ClockTree, Floorplan, PhysicalConfig, PhysicalError,
                   PlacementResult, Placer, RouteResult, Router, build_floorplan,
                   insert_fillers, route_capacitance)
 from .serialize import load as load_netlist
 from .serialize import dump as dump_netlist
 from .shell import Shell, ShellError, parse_options
-from .sta import TimingConfig, TimingEngine, estimate_power
+from .sta import TimingConfig, TimingEngine, analyse_corners, estimate_power
 from .writers import (ascii_layout, check_gds, read_gds_geometry,
                       read_gds_summary, write_def, write_gds, write_svg)
 
@@ -32,8 +33,11 @@ VERSION = "silicon-icc2 0.1"
 class PnrSession:
     """State shared by the physical-design commands."""
 
-    def __init__(self, library: Optional[Library] = None) -> None:
+    def __init__(self, library: Optional[Library] = None,
+                 library_min: Optional[Library] = None) -> None:
         self.library = library or default_library()
+        # fast corner, used for hold when min/max analysis is on
+        self.library_min = library_min
         self.netlist: Optional[GateNetlist] = None
         self.source = ""
         self.constraints: Dict[str, float] = {}
@@ -43,8 +47,10 @@ class PnrSession:
         self.placement: Optional[PlacementResult] = None
         self.cts: Optional[CTSResult] = None
         self.route: Optional[RouteResult] = None
+        self.parasitics: Optional[Parasitics] = None
         self.fillers: List[GateCell] = []
         self.stages: List[str] = []
+        self.corner_results: Dict[str, object] = {}
         self.timing = None
         self.power = None
 
@@ -60,14 +66,25 @@ class PnrSession:
 
     # -- timing ----------------------------------------------------------
     def analyse(self) -> None:
-        engine = TimingEngine(self.netlist, self.library, self.config)
+        caps = route_capacitance(self.route, self.phys) if self.route else None
+        if self.library_min is not None:
+            merged, power, per_corner = analyse_corners(
+                self.netlist, {"max": self.library, "min": self.library_min},
+                self.config, parasitics=self.parasitics)
+            self.timing = merged
+            self.power = power
+            self.corner_results = per_corner
+            return
+        engine = TimingEngine(self.netlist, self.library, self.config,
+                              parasitics=self.parasitics)
         arrivals: Dict[str, float] = {}
         if self.cts is not None:
             arrivals = {inst: delay for inst, delay in self.cts.sink_delays.items()}
         engine.set_clock_arrivals(arrivals)
-        caps = route_capacitance(self.route, self.phys) if self.route else None
-        self.timing = engine.run(net_caps=caps)
-        self.power = estimate_power(self.netlist, self.library, self.config, engine.load)
+        # after routing the extracted RC tree replaces the per-fanout estimate
+        self.timing = engine.run(net_caps=caps, parasitics=self.parasitics)
+        self.power = estimate_power(self.netlist, self.library, self.config,
+                                    engine.load)
 
 
 class Icc2Shell(Shell):
@@ -119,12 +136,22 @@ class Icc2Shell(Shell):
                        f"{s.config.output_delay} ns.")
             return ""
 
-        @self.register("set_library", "set_library <file.lib>",
-                       "load a Liberty library instead of the built-in one")
+        @self.register("set_library",
+                       "set_library [-min] <file.lib>",
+                       "load a Liberty library (default: the built-in slow corner); "
+                       "-min sets the fast corner for hold analysis")
         def set_library(args):
-            if not args:
+            _flags, opts, positional = parse_options(
+                args, options=("min",), flags=("min",))
+            if not positional:
                 raise ShellError("set_library needs a .lib path")
-            s.library = read_library(args[0])
+            if "min" in opts or _flags:
+                s.library_min = read_library(positional[-1])
+                self.write(f"Information: Fast corner '{s.library_min.name}' "
+                           f"({len(s.library_min.cells)} cells) loaded for hold "
+                           f"analysis.")
+                return ""
+            s.library = read_library(positional[-1])
             for cell in s.netlist.cells if s.netlist else ():
                 model = s.library.cell(cell.cell)
                 cell.width = model.width
@@ -211,6 +238,7 @@ class Icc2Shell(Shell):
                 self.error(f"{result.overlaps} placement overlap(s) remain")
             s.cts = None
             s.route = None
+            s.parasitics = None
             s.analyse()
             self.write(f"Information: Pre-CTS timing (ideal clock): WNS "
                        f"{s.timing.wns:.3f} ns, TNS {s.timing.tns:.3f} ns.")
@@ -248,6 +276,7 @@ class Icc2Shell(Shell):
             s.require_stage("place")
             s.route = Router(s.netlist, s.library, s.plan, s.phys).route()
             s.fillers = insert_fillers(s.netlist, s.library, s.plan)
+            s.parasitics = extract(s.netlist, s.library, s.plan, s.route, s.phys.rules)
             s.stages.append("route")
             result = s.route
             for layer in sorted(result.layer_usage):
@@ -270,6 +299,71 @@ class Icc2Shell(Shell):
                            f"(see report_drc)")
             return ""
 
+        @self.register("report_parasitics", "report_parasitics [-max_nets <n>]",
+                       "extracted RC per net (worst offenders first)")
+        def report_parasitics(args):
+            _flags, opts, _pos = parse_options(args, options=("max_nets",))
+            s.require_stage("route")
+            if s.parasitics is None:
+                s.parasitics = extract(s.netlist, s.library, s.plan, s.route,
+                                       s.phys.rules)
+            count = int(opts.get("max_nets", 10))
+            stats = s.parasitics.summary()
+            lines = [f"{'Nets with RC':<24}{int(stats['nets']):>10}",
+                     f"{'Total capacitance (pF)':<24}{stats['cap']:>10.4f}",
+                     f"{'Total resistance (ohm)':<24}{stats['res']:>10.2f}",
+                     f"{'Worst net delay (ps)':<24}{stats['worst_delay'] * 1000:>10.2f}",
+                     "",
+                     f"{'Net':<20}{'Cap (fF)':>10}{'Res (ohm)':>11}"
+                     f"{'Sinks':>7}{'Worst delay (ps)':>18}"]
+            worst = sorted(s.parasitics.nets.values(),
+                           key=lambda entry: -max(entry.sink_delays.values(),
+                                                  default=0.0))[:count]
+            for entry in worst:
+                lines.append(f"{entry.net:<20}{entry.total_capacitance * 1000:>10.2f}"
+                             f"{entry.total_resistance:>11.1f}"
+                             f"{len(entry.sink_delays):>7}"
+                             f"{max(entry.sink_delays.values(), default=0.0) * 1000:>18.2f}")
+            return "\n".join(lines)
+
+        @self.register("write_spef", "write_spef <file.spef>",
+                       "write SPEF 1.0 for the extracted RC trees")
+        def write_spef_cmd(args):
+            if not args:
+                raise ShellError("write_spef needs a path")
+            s.require_stage("route")
+            _ensure_parent(args[0])
+            if s.parasitics is None:
+                s.parasitics = extract(s.netlist, s.library, s.plan, s.route,
+                                       s.phys.rules)
+            write_spef(args[0], s.parasitics, s.netlist.top)
+            summary = read_spef_summary(args[0])
+            self.write(f"Information: SPEF written to '{args[0]}' "
+                       f"({int(summary['nets'])} nets, "
+                       f"{summary['cap']:.4f} pF, {summary['res']:.1f} ohm).")
+            return ""
+
+        @self.register("report_corners", "report_corners",
+                       "per-corner setup and hold summary")
+        def report_corners(args):
+            s.require_netlist()
+            if len(s.corner_results) < 2:
+                raise ShellError("min/max analysis is off; load a fast corner with "
+                                 "'set_library -min <file.lib>'")
+            lines = [f"{'Corner':<22}{'Library':<20}{'Setup WNS':>11}"
+                     f"{'Hold WNS':>11}{'TNS':>9}"]
+            lines.append("-" * 73)
+            for role in ("max", "min"):
+                result = s.corner_results.get(role)
+                if result is None:
+                    continue
+                lines.append(f"{role:<22}{result.corner:<20}{result.wns:>11.3f}"
+                             f"{result.hold_wns:>11.3f}{result.tns:>9.3f}")
+            lines.append("")
+            lines.append("Reported setup slack comes from the max corner, hold slack")
+            lines.append("from the min corner.")
+            return "\n".join(lines)
+
         @self.register("report_qor", "report_qor", "summary of quality of results")
         def report_qor(args):
             s.require_netlist()
@@ -285,6 +379,11 @@ class Icc2Shell(Shell):
                 extra.append(f"{'HPWL (estimated):':<32}{s.placement.hpwl:>14.1f} um")
             if s.cts:
                 extra.append(f"{'Clock skew (ns):':<32}{s.cts.skew:>20.4f}")
+            if s.parasitics is not None:
+                stats = s.parasitics.summary()
+                extra.append(f"{'Extracted cap (pF):':<32}{stats['cap']:>20.4f}")
+                extra.append(f"{'Worst net delay (ps):':<32}"
+                             f"{stats['worst_delay'] * 1000:>20.2f}")
             if s.route:
                 extra.append(f"{'Routed wirelength:':<32}{s.route.wirelength:>14.1f} um")
                 extra.append(f"{'Vias:':<32}{s.route.vias_count:>20}")

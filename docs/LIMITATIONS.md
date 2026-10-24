@@ -88,16 +88,32 @@ Not implemented: useful-skew scheduling, buffer sizing/inverting pairs, latch-ba
 trees, clock gating, mesh/H-tree templates, shielding, and clock-route DRC as a
 separate pass (the clock nets go through the same router as data nets).
 
+## Parasitics
+
+Implemented: `parasitics.py` builds a distributed RC tree from the routed
+geometry (split at junctions and pins), takes R and C per layer from the rule
+deck, evaluates Elmore delays to every sink and the total load, and writes SPEF
+1.0 that `read_spef_summary` can read back. Post-route timing uses this instead of
+a per-fanout estimate, and `report_parasitics` lists the worst nets.
+
+Not implemented: coupling capacitance (no `*CAP` coupling section, no crosstalk
+driver), inductance, shielding, via resistance, temperature/width-dependent
+resistivity, and reduction of long RC trees before they reach the timer.
+
 ## Timing and power
 
 Implemented: Liberty NLDM delay and output-slew tables at (input transition,
-output load), RC net delay from routed length, setup and hold checks with clock
-skew, WNS/TNS, per-endpoint slack, worst-path reporting with per-stage increments,
-switching plus leakage power.
+output load), worst-of-rise/fall arcs, net delay and loads from the extracted RC
+tree, OCV derates with separate late/early factors for cells and nets, min/max
+corner analysis (setup at the slow corner, hold at the fast one), library
+`max_transition`/`max_capacitance` limits, setup and hold checks with clock skew,
+WNS/TNS, per-endpoint slack, worst-path reporting with per-stage increments and
+the wire component of each stage, switching plus leakage power.
 
-Not implemented: internal power tables, CCS/ECSM, multi-corner/MCMM analysis,
-OCV/AOCV/POCV derates, crosstalk and noise, IR drop and electromigration,
-clock-gating power, SDF/VCD output, and statistical timing.
+Not implemented: internal power tables, CCS/ECSM, AOCV/POCV (the derates are
+flat), crosstalk delay and noise, IR drop and electromigration, clock-gating
+power, SDF/VCD/SPEF-driven handoff to another timer (SPEF is written for *other*
+tools, not consumed by this one), and statistical timing.
 
 ## Synthesis
 
@@ -115,11 +131,11 @@ and formal equivalence checking.
 
 Implemented: JSON netlist database (`docs/DATABASE.md`), Verilog netlist out, SDC
 write/read, DEF 5.8 write, GDSII write **and** read-back for DRC, LEF 5.8 write and
-read, SVG layout view.
+read, SPEF 1.0 write and read, SVG layout view.
 
 Not implemented: DEF/LEF *import* into the database (only the LEF reader, used to
-check the writer), OASIS, SPEF/SPF parasitic files, Verilog-A/UPF, and physical
-hierarchy (the block macro is written, but a hierarchical P&R flow is not).
+check the writer), OASIS, SDF, Verilog-A/UPF, and physical hierarchy (the block
+macro is written, but a hierarchical P&R flow is not).
 
 ## Practicalities
 
@@ -127,6 +143,9 @@ hierarchy (the block macro is written, but a hierarchical P&R flow is not).
   larger would be slow and would need better data structures (grid indices,
   incremental timing) rather than more memory tweaks.
 * No GUI. Layout inspection is the SVG view and the ASCII map.
+* Two synthetic corners ship with the repository (slow and fast). They are
+  generated from one cell set by `tools/make_corner.py`, which is why the
+  min/max analysis is meaningful as *code* but says nothing about real silicon.
 * Error handling is explicit (a `ShellError`/`PhysicalError` with a message) rather
   than a crash, but the tool does not attempt to recover from a malformed netlist
   by guessing.
