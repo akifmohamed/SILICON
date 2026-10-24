@@ -327,6 +327,34 @@ The engines are real; the numbers and the library are not. Read
 
 ---
 
+## Publishing this repository to GitHub
+
+The working tree here is already a git repository with a real commit history on
+`main`. It was created in a sandbox with no GitHub credentials, so nothing has
+been pushed from it — pushing is the one step you have to run yourself:
+
+```bash
+# with an authenticated GitHub CLI
+scripts/publish.sh your-user/silicon            # public
+scripts/publish.sh your-user/silicon --private  # private
+
+# or by hand
+git remote add origin git@github.com:your-user/silicon.git
+git push -u origin main
+```
+
+`scripts/publish.sh` refuses to run on a dirty tree, runs the test suite first,
+sets a git identity if the checkout has none, creates the repository through
+`gh repo create` when it can, and pushes. It never writes credentials into the
+repository.
+
+`.github/workflows/ci.yml` runs on every push and pull request: the unit tests on
+Python 3.9–3.12, the three example flows with `--max-drc 0`, the equivalence
+gate, a cross-hash-seed determinism check, both scripted shells and the GDSII
+stream check.
+
+---
+
 ## License
 
 MIT. The cell library, the rule deck and all data in this repository are

@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: tests (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+      - name: Unit tests
+        run: python -m pytest tests/ -q
+      - name: End-to-end flow (dc + icc2)
+        run: |
+          ./bin/silicon flow -r examples/rtl/alu.v -t alu --period 4 --max-drc 0
+          ./bin/silicon flow -r examples/rtl/counter.v -t counter --period 4 --max-drc 0
+          ./bin/silicon flow -r examples/rtl/mac.v -t mac --period 4 --max-drc 0
+      - name: Equivalence gate
+        run: ./bin/silicon verify -r examples/rtl/alu.v -t alu --vectors 128
+      - name: Determinism
+        run: |
+          PYTHONHASHSEED=1 ./bin/silicon flow -r examples/rtl/alu.v -t alu -o /tmp/a > /dev/null
+          PYTHONHASHSEED=7 ./bin/silicon flow -r examples/rtl/alu.v -t alu -o /tmp/b > /dev/null
+          diff -r /tmp/a /tmp/b
+      - name: Scripted shells and GDS stream check
+        run: |
+          ./bin/dc -f examples/dc_alu.tcl
+          ./bin/icc2 -f examples/icc2_alu.tcl
+          ./bin/icc2 -x 'read_netlist build/alu.json' -x 'initialize_floorplan' \
+                     -x 'place_opt' -x 'clock_opt' -x 'route_auto' \
+                     -x 'check_gds build/alu.gds'
