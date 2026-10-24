@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "silicon"
+version = "0.2.0"
+description = "A from-scratch logic synthesis (dc) and physical design (icc2) toolchain: RTL to GDSII in pure Python"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "silicon" }]
+keywords = ["eda", "verilog", "synthesis", "place-and-route", "sta", "gdsii", "lef", "def"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.urls]
+Documentation = "docs/"
+Rules = "docs/DESIGN_RULES.md"
+Limitations = "docs/LIMITATIONS.md"
+
+[project.scripts]
+silicon = "silicon.cli:main"
+dc_shell = "silicon.dc_shell:main"
+icc2_shell = "silicon.icc2_shell:main"
+
+[tool.setuptools]
+packages = ["silicon"]
+
+[tool.setuptools.package-data]
+silicon = ["lib/*.lib"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

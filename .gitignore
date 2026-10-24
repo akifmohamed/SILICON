@@ -1,0 +1,23 @@
+# build artefacts
+build/
+*.pyc
+
+# python
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+dist/
+.mypy_cache/
+.ruff_cache/
+
+# editors / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# local scratch
+/tmp/
+*.log
