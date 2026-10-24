@@ -88,6 +88,9 @@ class TimingResult:
     hold_violations: int = 0
     max_slew_violations: int = 0
     max_cap_violations: int = 0
+    # (net, actual, limit) for every limit violation, so a report can name them
+    slew_violations: List[Tuple[str, float, float]] = field(default_factory=list)
+    cap_violations: List[Tuple[str, float, float]] = field(default_factory=list)
     paths: List[TimingPath] = field(default_factory=list)
     hold_paths: List[TimingPath] = field(default_factory=list)
     unclocked_endpoints: int = 0
@@ -368,6 +371,7 @@ class TimingEngine:
             limit = self._slew_limit(self.lib.cell(driver.cell)) or cfg.max_transition
             if limit and slew > limit:
                 result.max_slew_violations += 1
+                result.slew_violations.append((net, slew, limit))
         for net, load in self.load.items():
             driver = self.driver.get(net)
             if driver is None:
@@ -378,6 +382,12 @@ class TimingEngine:
             cap = max(limits, default=0.0) or cfg.max_capacitance
             if cap and load > cap:
                 result.max_cap_violations += 1
+                result.cap_violations.append((net, load, cap))
+        # worst first, so a report shows the offenders and not the tail
+        result.slew_violations.sort(key=lambda item: (item[1] / item[2])
+                                    if item[2] else 0.0, reverse=True)
+        result.cap_violations.sort(key=lambda item: (item[1] / item[2])
+                                   if item[2] else 0.0, reverse=True)
         result.corner = self.lib.corner
         result.derated = any(value != 1.0 for value in
                              (cfg.derate_cell_late, cfg.derate_cell_early,

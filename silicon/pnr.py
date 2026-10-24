@@ -159,6 +159,7 @@ class PhysicalConfig:
     via_doubling: bool = False
     steiner_points: int = 6            # max extra Steiner points per net
     repair_min_area: bool = True
+    routing_timing_driven: bool = True # critical nets are routed first
     maze_router: bool = True           # grid-based A* fallback for hard nets
     maze_via_cost: float = 6.0         # cost of a layer change, in track steps
     maze_overflow_cost: float = 30.0   # cost of squeezing past another net
@@ -253,10 +254,11 @@ class Placer:
     """Quadratic placement + row legalisation + swap improvement."""
 
     def __init__(self, netlist: GateNetlist, library: Library, plan: Floorplan,
-                 config: PhysicalConfig) -> None:
+                 config: PhysicalConfig, timing=None) -> None:
         self.nl = netlist
         self.lib = library
         self.plan = plan
+        self.timing = timing
         self.cfg = config
         self.cells = [c for c in netlist.cells]
         for cell in self.cells:
@@ -845,6 +847,7 @@ class RouteResult:
     doubled_vias: int = 0
     maze_nets: int = 0
     maze_length: float = 0.0
+    critical_nets: int = 0
     merged_runs: int = 0
     overflow_nets: List[str] = field(default_factory=list)
     widened_segments: int = 0
@@ -1001,10 +1004,11 @@ class Router:
     """
 
     def __init__(self, netlist: GateNetlist, library: Library, plan: Floorplan,
-                 config: PhysicalConfig) -> None:
+                 config: PhysicalConfig, timing=None) -> None:
         self.nl = netlist
         self.lib = library
         self.plan = plan
+        self.timing = timing
         self.cfg = config
         self.pitch = config.track_pitch
         self.rules = config.rules
@@ -1535,10 +1539,39 @@ class Router:
         return terminals, added
 
     # -- net routing -----------------------------------------------------
+    def net_criticality(self) -> Dict[str, float]:
+        """``net -> priority`` from the timing view, 0 for non-critical nets.
+
+        A net on a reported path gets the criticality of the worst path it is on
+        (``1 - slack/period``, clamped), so the router can spend its scarce early
+        tracks on the nets that decide whether the design meets timing.
+        """
+        if self.timing is None or not self.cfg.routing_timing_driven:
+            return {}
+        period = max(float(getattr(self.timing, "clock_period", 0.0) or 0.0), 1e-9)
+        critical: Dict[str, float] = {}
+        for path in list(getattr(self.timing, "paths", []))[:self.cfg.timing_paths]:
+            slack = float(getattr(path, "slack", 0.0))
+            score = 1.0 - min(max(slack, 0.0) / period, 1.0)
+            for hop in getattr(path, "hops", ()):
+                net = getattr(hop, "net", "")
+                if net:
+                    critical[net] = max(critical.get(net, 0.0), score)
+        return critical
+
     def _net_order(self) -> List[str]:
-        """Wide (many-pin) nets first; ties broken by name for determinism."""
-        return [net for net, _keys in sorted(self.nl.nets.items(),
-                                             key=lambda kv: (-len(kv[1]), kv[0]))]
+        """Critical nets first, then wide nets; ties broken by name.
+
+        Routing order is a resource allocation decision: the first nets routed get
+        the tracks closest to their pins, so the nets on the worst timing paths go
+        first when a timing view is available. Without one this degrades to the
+        fanout/name order, which is deterministic either way.
+        """
+        critical = self.net_criticality()
+        return [net for net, _keys in sorted(
+            self.nl.nets.items(),
+            key=lambda kv: (-round(critical.get(kv[0], 0.0), 2),
+                            -len(kv[1]), kv[0]))]
 
     def _route_net(self, net: str, result: RouteResult, offset: int = 0) -> None:
         keys = sorted(self.nl.nets.get(net, ()))
@@ -1726,6 +1759,9 @@ class Router:
     def route(self) -> RouteResult:
         result = RouteResult()
         order = self._net_order()
+        critical = self.net_criticality()
+        result.critical_nets = sum(1 for net in order
+                                   if critical.get(net, 0.0) > 0.0)
         checker = DrcChecker(self.rules)
         pending = list(order)
         attempt = 0

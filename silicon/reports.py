@@ -132,6 +132,33 @@ def report_qor(timing: TimingResult, power: PowerResult, design: str,
     return "\n".join(out)
 
 
+def report_constraints(timing: TimingResult, design: str,
+                       max_items: int = 10) -> str:
+    """Limit violations: max transition and max capacitance, worst first."""
+    out = [_header("constraints", design)]
+    out.append(f"{'Transition violations:':<32}{timing.max_slew_violations:>8}")
+    out.append(f"{'Capacitance violations:':<32}{timing.max_cap_violations:>8}")
+    out.append("")
+    if timing.slew_violations:
+        out.append(f"{'Net':<24}{'Slew (ns)':>12}{'Limit':>10}{'Over':>10}")
+        out.append("-" * 56)
+        for net, value, limit in timing.slew_violations[:max_items]:
+            out.append(f"{net:<24}{value:>12.4f}{limit:>10.4f}"
+                       f"{value - limit:>10.4f}")
+        out.append("")
+    if timing.cap_violations:
+        out.append(f"{'Net':<24}{'Load (pF)':>12}{'Limit':>10}{'Over':>10}")
+        out.append("-" * 56)
+        for net, value, limit in timing.cap_violations[:max_items]:
+            out.append(f"{net:<24}{value:>12.4f}{limit:>10.4f}"
+                       f"{value - limit:>10.4f}")
+        out.append("")
+    if not timing.slew_violations and not timing.cap_violations:
+        out.append("No design-rule violations: every net is inside the library")
+        out.append("max_transition and max_capacitance limits.")
+    return "\n".join(out)
+
+
 def report_power(power: PowerResult, design: str, clock_period: float) -> str:
     freq = 1000.0 / max(clock_period, 1e-9)
     out = [_header("power", design)]

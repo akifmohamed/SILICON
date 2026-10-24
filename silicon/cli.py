@@ -133,7 +133,8 @@ def cmd_pnr(args) -> int:
             setattr(config, key, value)
     if args.period:
         config.clock_period = args.period
-    phys = PhysicalConfig(core_utilization=args.util, aspect_ratio=args.aspect)
+    phys = PhysicalConfig(core_utilization=args.util, aspect_ratio=args.aspect,
+                          routing_timing_driven=getattr(args, "td_route", True))
     plan = build_floorplan(netlist, library, phys)
     placement = Placer(netlist, library, plan, phys).place(
         timing=TimingEngine(netlist, library, config).run()
@@ -142,7 +143,15 @@ def cmd_pnr(args) -> int:
                     plan=plan).build(config.clock_name)
     for buffer in cts.buffers:
         netlist.add_cell(buffer)
-    route = Router(netlist, library, plan, phys).route()
+    # the router sees the pre-route timing view so nets on the critical paths
+    # get the first choice of tracks (see Router.net_criticality)
+    clock_delays = cts.sink_delays if phys.routing_timing_driven else None
+    pre_route = TimingEngine(netlist, library, config)
+    if clock_delays:
+        pre_route.set_clock_arrivals(clock_delays)
+    route = Router(netlist, library, plan, phys,
+                   timing=pre_route.run() if phys.routing_timing_driven else None
+                   ).route()
     fillers = insert_fillers(netlist, library, plan)
     net_caps = route_capacitance(route, phys)
     parasitics = extract(netlist, library, plan, route, phys.rules)
@@ -192,6 +201,7 @@ def cmd_pnr(args) -> int:
     qor_lines.append(f"{'Filler cells:':<32}{len(fillers):>20}")
     qor_lines.append(f"{'Merged runs:':<32}{route.merged_runs:>20}")
     qor_lines.append(f"{'Maze-routed nets:':<32}{route.maze_nets:>20}")
+    qor_lines.append(f"{'Critical nets routed first:':<32}{route.critical_nets:>20}")
     qor_lines.append(f"{'Congestion peak:':<32}"
                      f"{placement.congestion_peak:>20.3f}")
     qor_lines.append(f"{'Timing-weighted nets:':<32}"
@@ -305,6 +315,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                            help="core utilisation target")
             p.add_argument("--aspect", type=float, default=1.0, help="core aspect ratio")
             p.add_argument("--max-drc", type=int, default=None, dest="max_drc")
+            p.add_argument("--no-td-route", dest="td_route", action="store_false",
+                           help="route nets in fanout order instead of by slack")
 
     p_synth = sub.add_parser("synth", help="run the synthesis engine")
     add_common(p_synth, True, False)

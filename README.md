@@ -97,8 +97,9 @@ pip install -e .        # provides silicon, dc_shell, icc2_shell
 `dc_shell` command set (all implemented, none stubbed):
 `read_verilog`, `elaborate`, `current_design`, `list_designs`, `set_library`,
 `create_clock`, `set_input_delay`, `set_output_delay`, `set_clock_uncertainty`,
-`set_max_fanout`, `set_max_transition`, `compile`, `verify`, `report_timing`,
-`report_area`, `report_power`, `report_qor`, `report_cell`, `report_design`,
+`set_max_fanout`, `set_max_transition`, `set_ocv`, `compile`, `verify`,
+`report_timing`, `report_area`, `report_power`, `report_qor`,
+`report_constraints`, `report_cell`, `report_design`,
 `check_design`, `write`, `write_sdc`, `read_sdc`, `source`, `help`, `history`,
 `version`.
 
@@ -123,6 +124,7 @@ Engines:
   nets), library `max_transition`/`max_capacitance` limits, setup and hold
   checks, clock skew from the extracted clock tree, WNS/TNS, and reportable
   worst paths with per-stage increments and the wire component of each stage.
+  `set_ocv` changes the derate factors and re-times without re-synthesising.
 * **Min/max corners** — `set_library -min fast.lib` switches the hold analysis
   to the fast corner; `report_corners` shows setup at the slow corner and hold
   at the fast one. Both bundled corners are synthetic and the fast one is
@@ -140,7 +142,8 @@ Engines:
 `initialize_floorplan`, `place_opt`, `clock_opt`, `route_auto`, `report_drc`,
 `check_gds`, `report_congestion`, `report_placement`, `report_clock_tree`,
 `report_parasitics`, `report_corners`, `report_timing`, `report_area`,
-`report_power`, `report_qor`, `report_layout`, `write_def`, `write_gds`,
+`report_power`, `report_qor`, `report_constraints`, `set_ocv`,
+`report_layout`, `write_def`, `write_gds`,
 `write_spef`, `write_lef`, `write_library_lef`, `write_tech_lef`, `write_svg`,
 `write_netlist`, `help`, `history`, `version`.
 
@@ -201,14 +204,15 @@ with extracted RC and OCV derates, hold at the fast corner.
 
 | design | cells | area (µm²) | WNS pre-route (ns) | routed wire (µm) | vias | DRC | stream DRC | setup WNS (ns) | hold WNS (ns) | core (µm) × rows |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `alu` (8-bit, 5 ops + MAC) | 218 | 545.24 | +1.743 | 4101.7 | 208 | 0 | 0 | +1.148 | +1.095 | 29.07 × 30.00, 15 |
-| `counter` (8-bit, enable/load) | 42 | 151.25 | +2.275 | 584.4 | 41 | 0 | 0 | +2.131 | +0.168 | 15.39 × 16.00, 8 |
-| `mac` (8×8 accumulate) | 163 | 660.80 | +0.959 | 4385.2 | 199 | 0 | 0 | −0.001 | +0.211 | 31.92 × 32.00, 16 |
+| `alu` (8-bit, 5 ops + MAC) | 218 | 545.24 | +1.743 | 4122.8 | 208 | 0 | 0 | +1.147 | +1.094 | 29.07 × 30.00, 15 |
+| `counter` (8-bit, enable/load) | 42 | 151.25 | +2.275 | 584.7 | 41 | 0 | 0 | +2.132 | +0.168 | 15.39 × 16.00, 8 |
+| `mac` (8×8 accumulate) | 163 | 660.80 | +0.959 | 4383.9 | 199 | 0 | 0 | +0.017 | +0.212 | 31.92 × 32.00, 16 |
 
-The `mac` result is the honest one to look at: with a per-fanout wire estimate it
-looked comfortable, and once the extracted RC of the real wires and the OCV
-derates go in it lands 1 ps short of 4 ns. The tool reports that instead of
-softening the model, and `--min-wns 0` exits non-zero.
+The `mac` row is the honest one to look at. With a per-fanout wire estimate the
+design looked comfortable; once the extracted RC of the real wires and the OCV
+derates go in, it clears 4 ns by 17 ps — and without timing-driven routing it
+misses by 1 ps (see below). The tool reports that instead of softening the model,
+and `--min-wns 0` exits non-zero.
 
 Extraction gives 250 nets / 2.32 pF / 350 Ω on the ALU with a 5.9 ps worst net
 delay; the SPEF is written next to the layout.
@@ -225,6 +229,21 @@ At a 2 ns period, where the design genuinely misses timing, the same comparison 
 WNS −0.404 → −0.384 ns and TNS −0.625 → −0.594 ns. The gain is small because the
 weight is the only lever placement has here — and the tool still reports the
 negative slack instead of hiding it.
+
+Routing order is a resource decision, not a cosmetic one. Nets on the reported
+critical paths are routed before the rest, so they get the first choice of track
+(and hence the short connection to their pins). Same build, `--no-td-route`
+switches it off:
+
+| design | fanout order: wire / WNS | slack order: wire / WNS |
+|---|---|---|
+| `alu` | 4101.7 µm / +1.148 ns | 4122.8 µm / +1.147 ns |
+| `counter` | 584.4 µm / +2.131 ns | 584.7 µm / +2.132 ns |
+| `mac` | 4385.2 µm / **−0.001 ns** | 4383.9 µm / **+0.017 ns** |
+
+That is the whole claim: it costs half a percent of wirelength on designs that
+were already fine and turns a 1 ps violation into 17 ps of margin on the one that
+was not.
 
 Determinism: the same inputs produce byte-identical outputs across processes and
 hash seeds. `md5sum` of every artefact is stable under `PYTHONHASHSEED=1` and
@@ -275,7 +294,7 @@ examples/
   rtl/{alu,counter,mac}.v
   dc_alu.tcl, icc2_alu.tcl    scripted tool runs
   alu_layout_preview.svg      rendered ALU layout
-tests/                  96 tests
+tests/                  103 tests
 ```
 
 ---
@@ -283,7 +302,7 @@ tests/                  96 tests
 ## Tests
 
 ```bash
-python3 -m pytest tests/ -q     # 96 passed
+python3 -m pytest tests/ -q     # 103 passed
 ```
 
 The suite covers the parser, elaboration, the Liberty parser, synthesis and its
@@ -316,9 +335,10 @@ The engines are real; the numbers and the library are not. Read
   assignment optimisation.
 * CTS is a geometric bisection tree: no useful-skew scheduling, no buffer
   sizing, no latch-based trees, no clock gating.
-* Routing is track-based with a grid maze fallback; no negotiated-congestion
-  rip-up, no timing-driven routing, no redundant-via insertion by default, no
-  wire sizing beyond minimum-area repair.
+* Routing is track-based, with critical nets ordered by slack and a grid maze
+  fallback for nets the allocator cannot place; no negotiated-congestion
+  (PathFinder) rip-up, no redundant-via insertion by default, no wire sizing
+  beyond minimum-area repair.
 * Synthesis is word-level with carry-chain mapping: no retiming, no sequential
   optimisation beyond constant/identity folding, no signed arithmetic, no
   memories, no `generate`, no `initial`, no functions/tasks.

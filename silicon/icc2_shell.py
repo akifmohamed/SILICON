@@ -274,7 +274,11 @@ class Icc2Shell(Shell):
         def route_auto(args):
             s.require_netlist()
             s.require_stage("place")
-            s.route = Router(s.netlist, s.library, s.plan, s.phys).route()
+            # pass the current timing view so critical nets are routed first
+            pre_route = (getattr(s, "timing", None)
+                         if s.phys.routing_timing_driven else None)
+            s.route = Router(s.netlist, s.library, s.plan, s.phys,
+                             timing=pre_route).route()
             s.fillers = insert_fillers(s.netlist, s.library, s.plan)
             s.parasitics = extract(s.netlist, s.library, s.plan, s.route, s.phys.rules)
             s.stages.append("route")
@@ -416,6 +420,40 @@ class Icc2Shell(Shell):
                 text += (f"\nCore area: {core.width * core.height:.2f} um^2   "
                          f"Die area: {s.plan.die.width * s.plan.die.height:.2f} um^2")
             return text
+
+        @self.register("set_ocv",
+                       "set_ocv [-cell_late x] [-cell_early x] [-net_late x] "
+                       "[-net_early x] [-off]",
+                       "set on-chip-variation derates and re-run timing")
+        def set_ocv(args):
+            s.require_netlist()
+            flags, opts, _pos = parse_options(
+                args, flags=("off",),
+                options=("cell_late", "cell_early", "net_late", "net_early"))
+            if "off" in flags:
+                for key in ("derate_cell_late", "derate_cell_early",
+                            "derate_net_late", "derate_net_early"):
+                    setattr(s.config, key, 1.0)
+            for key, value in opts.items():
+                setattr(s.config, "derate_" + key, float(value))
+            s.analyse()
+            self.write(f"Information: OCV derates cell {s.config.derate_cell_late:.3f}"
+                       f"/{s.config.derate_cell_early:.3f}, net "
+                       f"{s.config.derate_net_late:.3f}/{s.config.derate_net_early:.3f}"
+                       f" (late/early).")
+            self.write(f"Information: WNS {s.timing.wns:.3f} ns, TNS "
+                       f"{s.timing.tns:.3f} ns, hold WNS {s.timing.hold_wns:.3f} ns.")
+            return ""
+
+        @self.register("report_constraints", "report_constraints [-max_items <n>]",
+                       "max transition and max capacitance limit violations")
+        def report_constraints(args):
+            s.require_netlist()
+            _flags, opts, _pos = parse_options(args, options=("max_items",))
+            if s.timing is None:
+                s.analyse()
+            return reports.report_constraints(s.timing, s.netlist.top,
+                                              int(opts.get("max_items", 10)))
 
         @self.register("report_power", "report_power", "power report")
         def report_power(args):

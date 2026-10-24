@@ -42,7 +42,8 @@ Not implemented:
 Implemented: iterated 1-Steiner topology, MST decomposition, per-layer track
 allocation with spacing-aware legality, L/Z connections with enclosure-correct
 corner vias, minimum-area widening, optional via doubling, rip-up/retry, wire
-merging, and a grid A* maze router used as the fallback for nets the track
+merging, slack-ordered net sequencing (`routing_timing_driven`, `--no-td-route`
+to disable), and a grid A* maze router used as the fallback for nets the track
 allocator cannot place legally. A net that cannot be routed legally is *failed
 and reported*, never forced onto an occupied track.
 
@@ -50,8 +51,9 @@ Not implemented:
 
 * **Negotiated-congestion rip-up** (PathFinder-style history costs). Retry is a
   small fixed number of rounds with an offset, not a converging negotiation.
-* **Timing-driven routing.** Net order is by fanout then name, not by slack, so
-  a critical net is not given the short path on purpose.
+* **Timing-driven routing decisions beyond net order.** The router does not
+  size wires, insert buffers or trade wirelength for slack inside a net: a
+  critical net gets the first pick of track, not a different topology.
 * **Detailed wire sizing / buffer insertion during routing**, and redundant-via
   insertion is off by default (`via_doubling=False`) because it trades wirelength
   for via count.

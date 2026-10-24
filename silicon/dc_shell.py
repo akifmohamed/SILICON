@@ -58,6 +58,19 @@ class DcSession:
         if self.netlist is None or self.timing is None:
             raise ShellError("design not compiled; run compile or compile_ultra first")
 
+    def analyse(self) -> None:
+        """Re-run timing on the mapped netlist against the current settings.
+
+        Constraint and derate changes call this instead of re-synthesising: the
+        netlist is already mapped, so only the timing view is stale.
+        """
+        self.require_compiled()
+        libraries = {"max": self.library}
+        if self.library_min is not None:
+            libraries["min"] = self.library_min
+        self.timing, self.power, self.corner_results = analyse_corners(
+            self.netlist, libraries, self.config)
+
 
 class DcShell(Shell):
     prompt = "dc_shell> "
@@ -309,6 +322,37 @@ class DcShell(Shell):
         def report_area(args):
             s.require_compiled()
             return reports.report_area(s.netlist, s.library, s.top or "design")
+
+        @self.register("set_ocv",
+                       "set_ocv [-cell_late x] [-cell_early x] [-net_late x] "
+                       "[-net_early x] [-off]",
+                       "set on-chip-variation derates and re-run timing")
+        def set_ocv(args):
+            flags, opts, _pos = parse_options(
+                args, flags=("off",),
+                options=("cell_late", "cell_early", "net_late", "net_early"))
+            if "off" in flags:
+                for key in ("derate_cell_late", "derate_cell_early",
+                            "derate_net_late", "derate_net_early"):
+                    setattr(s.config, key, 1.0)
+            for key, value in opts.items():
+                setattr(s.config, "derate_" + key, float(value))
+            if not s.netlist:
+                raise ShellError("no netlist; run compile first")
+            s.analyse()
+            self.write(f"Information: OCV derates cell {s.config.derate_cell_late:.3f}"
+                       f"/{s.config.derate_cell_early:.3f}, net "
+                       f"{s.config.derate_net_late:.3f}/{s.config.derate_net_early:.3f}"
+                       f" (late/early); WNS {s.timing.wns:.3f} ns.")
+            return ""
+
+        @self.register("report_constraints", "report_constraints [-max_items <n>]",
+                       "max transition and max capacitance limit violations")
+        def report_constraints(args):
+            s.require_compiled()
+            _flags, opts, _pos = parse_options(args, options=("max_items",))
+            return reports.report_constraints(s.timing, s.top or "design",
+                                              int(opts.get("max_items", 10)))
 
         @self.register("report_power", "report_power", "report dynamic and leakage power")
         def report_power(args):
