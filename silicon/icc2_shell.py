@@ -14,7 +14,8 @@ from typing import Dict, List, Optional
 
 from . import reports
 from .lef import read_lef, write_block_lef, write_cell_lef, write_tech_lef
-from .library import Library, default_library, fast_library, read_library
+from .library import (FAST_LIB, Library, default_library, fast_library,
+                      read_library)
 from .netlist import GateCell, GateNetlist
 from .parasitics import Parasitics, extract, read_spef_summary, write_spef
 from .pnr import (CTSResult, ClockTree, Floorplan, PhysicalConfig, PhysicalError,
@@ -28,7 +29,7 @@ from .sta import TimingConfig, TimingEngine, analyse_corners, estimate_power
 from .writers import (ascii_layout, check_gds, read_gds_geometry,
                       read_gds_summary, write_def, write_gds, write_svg)
 
-VERSION = "silicon-icc2 0.1"
+VERSION = "silicon-icc2 0.2"
 
 
 class PnrSession:
@@ -179,9 +180,17 @@ class Icc2Shell(Shell):
                        "size the core, build rows and place IO pins")
         def initialize_floorplan(args):
             s.require_netlist()
+            # -util / -utilization / -aspect are accepted as the short forms
+            # people type; -core_utilization stays the canonical name
             _flags, opts, _pos = parse_options(
                 args, options=("core_utilization", "aspect_ratio", "core_offset",
-                               "track_pitch", "row_height", "site_pitch"))
+                               "track_pitch", "row_height", "site_pitch",
+                               "util", "utilization", "aspect"))
+            for alias, canonical in (("util", "core_utilization"),
+                                     ("utilization", "core_utilization"),
+                                     ("aspect", "aspect_ratio")):
+                if alias in opts and canonical not in opts:
+                    opts[canonical] = opts[alias]
             if "core_utilization" in opts:
                 s.phys.core_utilization = float(opts["core_utilization"])
             if "aspect_ratio" in opts:
@@ -353,8 +362,10 @@ class Icc2Shell(Shell):
         def report_corners(args):
             s.require_netlist()
             if len(s.corner_results) < 2:
-                raise ShellError("min/max analysis is off; load a fast corner with "
-                                 "'set_library -min <file.lib>'")
+                raise ShellError(
+                    "min/max analysis is off; enable it with "
+                    f"'set_library -min {FAST_LIB}' (the bundled fast corner) "
+                    "or point it at your own min library")
             lines = [f"{'Corner':<22}{'Library':<20}{'Setup WNS':>11}"
                      f"{'Hold WNS':>11}{'TNS':>9}"]
             lines.append("-" * 73)

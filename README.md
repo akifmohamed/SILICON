@@ -94,6 +94,10 @@ pip install -e .        # provides silicon, dc_shell, icc2_shell
 
 ## `dc`: logic synthesis
 
+New here? **[QUICKSTART.md](QUICKSTART.md)** walks through installing the tools on
+your PATH, a first run, interactive `dc_shell`/`icc2_shell` sessions, driving your
+own RTL, and what to do with the GDS/DEF/SPEF/SDF afterwards.
+
 `dc_shell` command set (all implemented, none stubbed):
 `read_verilog`, `elaborate`, `current_design`, `list_designs`, `set_library`,
 `create_clock`, `set_input_delay`, `set_output_delay`, `set_clock_uncertainty`,
@@ -301,7 +305,7 @@ examples/
   rtl/{alu,counter,mac}.v
   dc_alu.tcl, icc2_alu.tcl    scripted tool runs
   alu_layout_preview.svg      rendered ALU layout
-tests/                  112 tests
+tests/                  113 tests
 ```
 
 ---
@@ -309,7 +313,7 @@ tests/                  112 tests
 ## Tests
 
 ```bash
-python3 -m pytest tests/ -q     # 112 passed
+python3 -m pytest tests/ -q     # 113 passed
 ```
 
 The suite covers the parser, elaboration, the Liberty parser, synthesis and its

@@ -22,6 +22,7 @@ library (stdcells_32nm) {
   nom_process : 1.0;
   nom_temperature : 125.0;
   nom_voltage : 0.95;
+  corner : "ss_0p95V_125C";
 
   lu_table_template (delay_template) {
     variable_1 : input_net_transition;

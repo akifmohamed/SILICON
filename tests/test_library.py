@@ -1,6 +1,7 @@
 import pytest
 
-from silicon.library import LibertyError, default_library, read_library
+from silicon.library import (LibertyError, default_library, fast_library,
+                             read_library)
 
 
 def test_builtin_library(library):
@@ -46,3 +47,20 @@ def test_reload_from_disk(tmp_path, library):
     src = Path(__file__).resolve().parents[1] / "silicon" / "lib" / "stdcells_32nm.lib"
     reloaded = read_library(str(src))
     assert set(reloaded.cells) == set(library.cells)
+
+
+def test_corner_name_travels_with_the_library_file():
+    """A library loaded by path reports the same corner as the bundled helper.
+
+    Regression: the tag used to be overridden in library.py, so
+    read_library(fast.lib) and fast_library() disagreed ("1p1V_m40C" vs
+    "ff_1p10V_m40C"). The name now lives in the .lib file.
+    """
+    from silicon.library import DEFAULT_LIB, FAST_LIB
+
+    slow = read_library(DEFAULT_LIB)
+    fast = read_library(FAST_LIB)
+    assert slow.corner == default_library().corner == "ss_0p95V_125C"
+    assert fast.corner == fast_library().corner == "ff_1p10V_m40C"
+    assert slow.nom_voltage == 0.95 and fast.nom_voltage == 1.10
+    assert fast.nom_temperature == -40.0

@@ -97,6 +97,9 @@ def build(source: str) -> str:
                   lambda m: m.group(1) + "1.10", text)
     text = re.sub(r"(nom_temperature\s*:\s*)[-+0-9.eE]+",
                   lambda m: m.group(1) + "-40.0", text)
+    # the corner name travels with the data, so a library loaded from a path
+    # reports the same tag as the bundled helper
+    text = re.sub(r'corner\s*:\s*"[^"]*"', 'corner : "ff_1p10V_m40C"', text, count=1)
 
     header = (
         "/*\n"

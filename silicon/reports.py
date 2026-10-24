@@ -89,7 +89,7 @@ def report_area(netlist: GateNetlist, library: Library, design: str) -> str:
 
 def report_timing(timing: TimingResult, design: str, max_paths: int = 3,
                   clock_name: str = "clk") -> str:
-    out = [_header("timing", design, "max_paths")]
+    out = [_header("timing", design, f"worst {max_paths} path(s)")]
     if not timing.paths:
         out.append("No timing paths found (design has no constrained endpoints).")
         return "\n".join(out)

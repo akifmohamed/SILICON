@@ -20,6 +20,7 @@ library (stdcells_32nm_ff) {
   nom_process : 1.0;
   nom_temperature : -40.0;
   nom_voltage : 1.10;
+  corner : "ff_1p10V_m40C";
 
   lu_table_template (delay_template) {
     variable_1 : input_net_transition;

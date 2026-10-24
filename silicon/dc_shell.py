@@ -27,7 +27,7 @@ from .sta import (PowerResult, TimingConfig, TimingResult, analyse,
 from .synth import OptStats, TechmapOptions, synthesize
 from .verilog import VerilogError, parse_modules
 
-VERSION = "silicon-dc 0.1"
+VERSION = "silicon-dc 0.2"
 
 
 class DcSession:

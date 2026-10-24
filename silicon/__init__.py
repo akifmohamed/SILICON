@@ -15,5 +15,5 @@ here is a foundry library and no number produced by this package is a claim
 about real silicon.
 """
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 __version__ = VERSION
