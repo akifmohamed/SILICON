@@ -135,8 +135,8 @@ def sdf_counts(text: str) -> dict:
 
 
 def _date() -> str:
-    import time
-    return time.strftime("%a %b %d %H:%M:%S %Y")
+    from .reports import timestamp
+    return timestamp()
 
 
 def _driver(netlist, net: str) -> Optional[str]:

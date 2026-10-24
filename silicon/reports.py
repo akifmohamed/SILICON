@@ -8,6 +8,7 @@ familiar, while every number is computed from the netlist and library.
 from __future__ import annotations
 
 import datetime
+import os
 from typing import Dict, List, Optional, Sequence
 
 from .library import Library
@@ -18,8 +19,27 @@ TOOL = "silicon-dc 0.1"   # replaced by the calling shell
 BANNER = "*" * 62
 
 
+def timestamp() -> str:
+    """Report timestamp, honouring ``SOURCE_DATE_EPOCH``.
+
+    Reproducible-build convention: when ``SOURCE_DATE_EPOCH`` is set the stamp is
+    derived from it instead of the wall clock, so two runs of the same inputs
+    produce byte-identical reports. Without it the reports carry the real time,
+    which is what a person reading them wants.
+    """
+    epoch = os.environ.get("SOURCE_DATE_EPOCH", "")
+    if epoch.strip():
+        try:
+            moment = datetime.datetime.fromtimestamp(int(epoch.strip()),
+                                                     datetime.timezone.utc)
+        except (ValueError, OverflowError, OSError):
+            moment = datetime.datetime.now(datetime.timezone.utc)
+        return moment.strftime("%a %b %d %H:%M:%S %Y")
+    return datetime.datetime.now().strftime("%a %b %d %H:%M:%S %Y")
+
+
 def _header(title: str, design: str, extra: Optional[str] = None) -> str:
-    stamp = datetime.datetime.now().strftime("%a %b %d %H:%M:%S %Y")
+    stamp = timestamp()
     lines = [BANNER, f"Report : {title}",
              f"Design : {design}",
              f"Version: {TOOL}",

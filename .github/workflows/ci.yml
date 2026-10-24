@@ -24,6 +24,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pytest
       - name: Unit tests
+        env:
+          SOURCE_DATE_EPOCH: "1700000000"
         run: python -m pytest tests/ -q
       - name: End-to-end flow (dc + icc2)
         run: |
@@ -33,6 +35,10 @@ jobs:
       - name: Equivalence gate
         run: ./bin/silicon verify -r examples/rtl/alu.v -t alu --vectors 128
       - name: Determinism
+        # SOURCE_DATE_EPOCH pins the report timestamp (reproducible-builds
+        # convention); hash order must not matter for anything else.
+        env:
+          SOURCE_DATE_EPOCH: "1700000000"
         run: |
           PYTHONHASHSEED=1 ./bin/silicon flow -r examples/rtl/alu.v -t alu -o /tmp/a > /dev/null
           PYTHONHASHSEED=7 ./bin/silicon flow -r examples/rtl/alu.v -t alu -o /tmp/b > /dev/null

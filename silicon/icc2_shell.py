@@ -525,12 +525,12 @@ class Icc2Shell(Shell):
             metal = [shape for shape in shapes
                      if shape.layer in set(s.phys.vertical_layers)
                      | set(s.phys.horizontal_layers)]
+            layers = sorted(set(s.phys.vertical_layers)
+                            | set(s.phys.horizontal_layers))
             lines = [f"GDSII stream   : {args[0]}",
                      f"Flattened metal: {len(metal)} shapes "
                      f"({len(shapes)} elements incl. cells and cuts)",
-                     f"Layers checked : "
-                     f"{', '.join(sorted(set(s.phys.vertical_layers)
-                                        | set(s.phys.horizontal_layers)))}",
+                     "Layers checked : " + ", ".join(layers),
                      ""]
             for rule in ("SHORT", "SPACING", "WIDTH", "MIN_AREA",
                          "VIA_SIZE", "VIA_SPACING"):

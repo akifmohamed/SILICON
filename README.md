@@ -248,15 +248,19 @@ were already fine and turns a 1 ps violation into 17 ps of margin on the one tha
 was not.
 
 Determinism: the same inputs produce byte-identical outputs across processes and
-hash seeds. `md5sum` of every artefact is stable under `PYTHONHASHSEED=1` and
-`PYTHONHASHSEED=7`.
+hash seeds. Reports carry a timestamp, so pin it with `SOURCE_DATE_EPOCH` (the
+reproducible-builds convention) when you want to diff two runs:
 
 ```
-$ PYTHONHASHSEED=1 ./bin/silicon flow -r examples/rtl/alu.v -t alu -o /tmp/a
-$ PYTHONHASHSEED=7 ./bin/silicon flow -r examples/rtl/alu.v -t alu -o /tmp/b
+$ SOURCE_DATE_EPOCH=1700000000 PYTHONHASHSEED=1 ./bin/silicon flow -r examples/rtl/alu.v -t alu -o /tmp/a
+$ SOURCE_DATE_EPOCH=1700000000 PYTHONHASHSEED=7 ./bin/silicon flow -r examples/rtl/alu.v -t alu -o /tmp/b
 $ diff -r /tmp/a /tmp/b && echo identical
 identical
 ```
+
+Every artefact is covered: JSON, Verilog, the three reports, DEF, LEF, GDSII, SVG,
+SPEF and SDF. A test in the suite runs the whole flow twice under different hash
+seeds and compares the bytes.
 
 Equivalence (`verify`, part of every `flow` run): alu 2304 output bits over 256
 vectors, counter and mac likewise — **0 mismatches**.
@@ -297,7 +301,7 @@ examples/
   rtl/{alu,counter,mac}.v
   dc_alu.tcl, icc2_alu.tcl    scripted tool runs
   alu_layout_preview.svg      rendered ALU layout
-tests/                  106 tests
+tests/                  112 tests
 ```
 
 ---
@@ -305,7 +309,7 @@ tests/                  106 tests
 ## Tests
 
 ```bash
-python3 -m pytest tests/ -q     # 106 passed
+python3 -m pytest tests/ -q     # 112 passed
 ```
 
 The suite covers the parser, elaboration, the Liberty parser, synthesis and its
