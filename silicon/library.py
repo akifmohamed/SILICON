@@ -322,6 +322,8 @@ class Library:
     site_width: float = 0.19
     row_height: float = 2.0
     corner: str = ""
+    nom_voltage: float = 0.0
+    nom_temperature: float = 0.0
     units: Dict[str, str] = field(default_factory=dict)
 
     def cell(self, name: str) -> LibCell:
@@ -401,6 +403,13 @@ def parse_liberty(text: str, name: str = "") -> Library:
     attrs = dict(lib_group.attrs)
     lib.corner = _corner_tag(attrs.get("nom_voltage", [None])[0],
                              attrs.get("nom_temperature", [None])[0])
+    for key, field_name in (("nom_voltage", "nom_voltage"),
+                            ("nom_temperature", "nom_temperature")):
+        if key in attrs:
+            try:
+                setattr(lib, field_name, float(attrs[key][0]))
+            except (TypeError, ValueError):
+                pass
     if "site_width" in attrs:
         lib.site_width = float(attrs["site_width"][0])
     if "row_height" in attrs:

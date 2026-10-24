@@ -20,6 +20,7 @@ from .parasitics import Parasitics, extract, read_spef_summary, write_spef
 from .pnr import (CTSResult, ClockTree, Floorplan, PhysicalConfig, PhysicalError,
                   PlacementResult, Placer, RouteResult, Router, build_floorplan,
                   insert_fillers, route_capacitance)
+from .sdf import write_sdf as write_sdf_file
 from .serialize import load as load_netlist
 from .serialize import dump as dump_netlist
 from .shell import Shell, ShellError, parse_options
@@ -612,6 +613,22 @@ class Icc2Shell(Shell):
             for name, delay in sorted(result.sink_delays.items())[:40]:
                 lines.append(f"{name:<24}{delay:>22.4f}")
             return "\n".join(lines)
+
+        @self.register("write_sdf", "write_sdf <file.sdf>",
+                       "write SDF 3.0 from the current timing view")
+        def write_sdf(args):
+            s.require_netlist()
+            if not args:
+                raise ShellError("write_sdf needs an output file")
+            engine = TimingEngine(s.netlist, s.library, s.config,
+                                  parasitics=s.parasitics)
+            if s.cts is not None:
+                engine.set_clock_arrivals(dict(s.cts.sink_delays))
+            engine.run(parasitics=s.parasitics)
+            path = write_sdf_file(args[0], s.netlist, s.library, engine,
+                                  tool="silicon-icc2")
+            self.write(f"Information: SDF written to {path}.")
+            return ""
 
         @self.register("write_def", "write_def <file.def>", "write DEF")
         def write_def_cmd(args):

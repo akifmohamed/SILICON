@@ -31,6 +31,7 @@ from .synth import TechmapOptions, synthesize
 from .verilog import parse_modules
 from .lef import write_block_lef, write_cell_lef, write_tech_lef
 from .parasitics import extract, read_spef_summary, write_spef
+from .sdf import write_sdf
 from .writers import (ascii_layout, check_gds, read_gds_summary, write_def,
                       write_gds, write_svg)
 
@@ -180,6 +181,11 @@ def cmd_pnr(args) -> int:
               stats={"WNS": f"{timing.wns:.3f} ns", "DRC": str(route.drc),
                      "wirelength": f"{route.wirelength:.0f} um"})
     write_spef(f"{base}.spef", parasitics, netlist.top)
+    # SDF for back-annotating a gate-level simulation of the routed design
+    sdf_engine = TimingEngine(netlist, library, config, parasitics=parasitics)
+    sdf_engine.set_clock_arrivals(dict(cts.sink_delays))
+    sdf_engine.run(parasitics=parasitics)
+    write_sdf(f"{base}.sdf", netlist, library, sdf_engine, tool="silicon-icc2")
     write_tech_lef(os.path.join(out, "tech.lef"), library)
     write_cell_lef(os.path.join(out, "cells.lef"), library)
     write_block_lef(f"{base}.lef", netlist, library, plan, netlist.top)
@@ -257,7 +263,7 @@ def cmd_pnr(args) -> int:
     if stream_total:
         print("[icc2] gds rules : " + ", ".join(
             f"{name}={len(items)}" for name, items in sorted(stream_drc.items())))
-    print(f"[icc2] outputs   : {base}.{{def,lef,gds,svg,spef,qor.rpt,timing.rpt}}")
+    print(f"[icc2] outputs   : {base}.{{def,lef,gds,svg,spef,sdf,qor.rpt,timing.rpt}}")
     min_wns = getattr(args, "min_wns", None)
     if min_wns is not None and timing.wns < min_wns:
         return 3

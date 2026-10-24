@@ -144,7 +144,8 @@ Engines:
 `report_parasitics`, `report_corners`, `report_timing`, `report_area`,
 `report_power`, `report_qor`, `report_constraints`, `set_ocv`,
 `report_layout`, `write_def`, `write_gds`,
-`write_spef`, `write_lef`, `write_library_lef`, `write_tech_lef`, `write_svg`,
+`write_spef`, `write_sdf`, `write_lef`, `write_library_lef`, `write_tech_lef`,
+`write_svg`,
 `write_netlist`, `help`, `history`, `version`.
 
 Engines:
@@ -274,6 +275,7 @@ silicon/
   sta.py                static timing + power
   rules.py              metal rule deck + GDSII layer map
   parasitics.py         RC extraction (Elmore), SPEF writer and reader
+  sdf.py                SDF 3.0 writer (IOPATH, INTERCONNECT, timing checks)
   pnr.py                floorplan, placement, congestion, CTS, router, maze, DRC
   writers.py            DEF, GDSII, SVG, ASCII, GDS read-back + stream DRC
   lef.py                LEF writer + reader
@@ -294,7 +296,7 @@ examples/
   rtl/{alu,counter,mac}.v
   dc_alu.tcl, icc2_alu.tcl    scripted tool runs
   alu_layout_preview.svg      rendered ALU layout
-tests/                  103 tests
+tests/                  106 tests
 ```
 
 ---
@@ -302,7 +304,7 @@ tests/                  103 tests
 ## Tests
 
 ```bash
-python3 -m pytest tests/ -q     # 103 passed
+python3 -m pytest tests/ -q     # 106 passed
 ```
 
 The suite covers the parser, elaboration, the Liberty parser, synthesis and its
@@ -329,7 +331,8 @@ The engines are real; the numbers and the library are not. Read
 * No antenna, density/CMP, multi-patterning, or well/implant rules; no LVS.
 * Liberty is a subset: NLDM delay/slew, capacitance, leakage, setup/hold and
   the max-transition/max-capacitance limits. No internal power tables, no
-  CCS/ECSM, no crosstalk, no SDF output.
+  CCS/ECSM, no crosstalk. SDF is written for other tools; min and max are the
+  same number because one corner is analysed at a time.
 * Placement is quadratic + legalisation + swaps. No wirelength-driven detailed
   placement, no region/boundary constraints, no multi-row cells, no pin
   assignment optimisation.

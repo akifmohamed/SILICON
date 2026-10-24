@@ -114,8 +114,9 @@ the wire component of each stage, switching plus leakage power.
 
 Not implemented: internal power tables, CCS/ECSM, AOCV/POCV (the derates are
 flat), crosstalk delay and noise, IR drop and electromigration, clock-gating
-power, SDF/VCD/SPEF-driven handoff to another timer (SPEF is written for *other*
-tools, not consumed by this one), and statistical timing.
+power, VCD-driven activity (activity is a fixed 0.10, clocks 2.0), reading
+another tool's SPEF back into the timer (the bundled reader only summarises),
+and statistical timing.
 
 ## Synthesis
 
@@ -133,11 +134,14 @@ and formal equivalence checking.
 
 Implemented: JSON netlist database (`docs/DATABASE.md`), Verilog netlist out, SDC
 write/read, DEF 5.8 write, GDSII write **and** read-back for DRC, LEF 5.8 write and
-read, SPEF 1.0 write and read, SVG layout view.
+read, SPEF 1.0 write and read, SDF 3.0 write (IOPATH, INTERCONNECT, SETUP/HOLD
+for another tool to consume), SVG layout view.
 
 Not implemented: DEF/LEF *import* into the database (only the LEF reader, used to
-check the writer), OASIS, SDF, Verilog-A/UPF, and physical hierarchy (the block
-macro is written, but a hierarchical P&R flow is not).
+check the writer), OASIS, Verilog-A/UPF, and physical hierarchy (the block macro
+is written, but a hierarchical P&R flow is not). The SDF writer emits min and max
+as the same number because only one corner is analysed at a time — a
+multi-corner run would have to merge the two SDFs to bracket both.
 
 ## Practicalities
 
